@@ -19,9 +19,9 @@ console.status = (text, color) => console.log(
 );
 console.version = (prefix, local, remote) => [
 	prefix,
-	local ? console.font(local[0], `-c ${local[1]}`) : '',
-	remote ? console.font('->', 90) : '',
-	remote ? console.font(remote[0], `-c ${remote[1]}`) : ''
+	local ? console.font(local[0], local[1]) : '',
+	remote ? console.font('⟶', 90) : '',
+	remote ? console.font(remote[0], remote[1]) : ''
 ].join(' ');
 
 class Server {
@@ -89,6 +89,7 @@ class Server {
 						[ 'package.json', JSON.stringify({
 							type: "module",
 							scripts: {
+								update: `${i}/index.mjs update`,
 								restart: `${i}/index.mjs restart`,
 								start: `${i}/index.mjs start`,
 								stop: `${i}/index.mjs stop`,
@@ -124,7 +125,7 @@ class Server {
 				}
 				if (done) {
 					this.clear();
-					console.log(`${console.font('SUCCESS', 32)} Use ${console.font(`npm start ${name}`, '35 -w')} to start the server`);
+					console.log(`${console.font('SUCCESS', 32)} Use ${console.font(`npm start ${host.name}`, '35 -w')} to start the server`);
 				} else throw new Error();
 			} catch (e) {
 				this.clear();
@@ -395,8 +396,8 @@ class Server {
 		this.clear();
 		if (error.stack) {
 			const e = error.stack.match(/^(.+): ([^\n]+)\n/) || [];
-			error = e[1]?.match(/([^:]+)$/)[1].trim();
 			text  = error.stderr || e[2];
+			error = e[1]?.match(/([^:]+)$/)[1].trim();
 		}
 		console.log(console.font('ERROR', 31), `${error}:`, console.font(text, 31));
 		process.exit(1);
@@ -445,7 +446,6 @@ class Server {
 			if (host instanceof Array) {
 				repo = JSON.parse((await sh.exec([
 					`curl`,
-					`-X POST`,
 					`-H "Content-Type: application/json"`,
 					`-A "hekate/${this.opts.version}"`,
 					`-d '${JSON.stringify(host.unique())}'`,
@@ -517,30 +517,34 @@ class Server {
 	async prompt (i) {
 		switch (i) {
 			case 'install': {
-				console.log();
 				console.log(console.font('ERROR', 31), `${console.font(`<${this.domain().name}>`, 90)} doesn't exist`);
-				console.log(console.font('ERROR', 31), 'Do you want to create this domain now?\n');
-				await this.prompt()
+				await this.prompt(`${console.font('ERROR', 31)} Do you want to create this domain now?`)
 					? console.log() || await this.run.build()
-					: console.log('\nLeaving in peace...');
+					: console.log(console.font('ERROR', 31), 'Leaving in peace...');
 				break;
 			}
 			default: return new Promise(resolve => {
-				  let need = false;
-				const wait = readline.createInterface({
-					input: process.stdin,
-					output: process.stdout,
-					prompt: `${(i ? `${i} ` : '')}(${console.font('Y', '-s')}es/${console.font('N', '-s')}o): `
-				});
-				wait.prompt();
-				wait.on('line', line => {
-					switch ((line.trim().match(Server.RegExp.prompt)?.[0]?.[0] || '').toLowerCase()) {
-						case 'y': need = true; return wait.close();
-						case 'n': need = false; return wait.close();
+				switch (process.argv[process.argv.length - 1]) {
+					case '-y': resolve(true); break;
+					case '-n': resolve(false); break;
+					default: {
+						  let need = false;
+						const wait = readline.createInterface({
+							input: process.stdin,
+							output: process.stdout,
+							prompt: `${(i ? `${i} ` : '')}(${console.font('Y', '-s')}es/${console.font('N', '-s')}o): `
+						});
+						wait.prompt();
+						wait.on('line', line => {
+							switch ((line.trim().match(Server.RegExp.prompt)?.[0]?.[0] || '').toLowerCase()) {
+								case 'y': need = true; return wait.close();
+								case 'n': need = false; return wait.close();
+							}
+							wait.prompt();
+						});
+						wait.on('close', () => resolve(need));
 					}
-					wait.prompt();
-				});
-				wait.on('close', () => resolve(need));
+				}
 			});
 		}
 	};

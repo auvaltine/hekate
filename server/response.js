@@ -65,16 +65,20 @@ export default Response = {
 	async template (html, args) {
 		const request = this.req;
 		  let fn = 'return {body:`' + html.toString('utf8') + '`.trim(),args:this};';
-		return await (async function () {}).constructor(fn).call({
-			...this.view,
-			...app.get('view'),
-			file: request.file,
-			post: key => request.walk(`session.post.data.${key}`) || '',
-			session: request.session,
-			ip: request.ip,
-			url: request.url,
-			...(args || {})
-		});
+		try {
+			return await (async function () {}).constructor(fn).call({
+				...this.view,
+				...app.get('view'),
+				file: request.file,
+				post: key => request.walk(`session.post.data.${key}`) || '',
+				session: request.session,
+				ip: request.ip,
+				url: request.url,
+				...(args || {})
+			});
+		} catch (e) {
+			app.error(console.font(`${e.constructor.name}: ${e.message}`, 31) + ` in ` + console.font('eval\'d template', 31));
+		}
 	},
 
 	/*

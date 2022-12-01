@@ -174,8 +174,12 @@ export default Request = {
 		 */
 		async (request, response) => {
 			if (request.method === 'POST') {
-				delete request.post.temp;
-				request.xhr ? await response.json(request.post) : response.redirect(request.url.href);
+				if (request.xhr) {
+					await response.json(request.post);
+				} else {
+					response.statusCode = 303;
+					response.setHeader('Location', request.url.href);
+				}
 			} else {
 				response.setHeader('Content-Type', request.file.type + Mime.Charset(request.file.type));
 				request.method !== 'HEAD' && await response[Response[request.file.method] ? request.file.method : 'dynamic']();
@@ -201,7 +205,7 @@ export default Request = {
 			}
 		}
 		if ((request.xhr || request.method !== 'POST') && request.session?.post) {
-			try { delete request.session.post; } catch (e) {}
+			delete request.session.post;
 		}
 		response.writableEnded || response.end();
 		app.get('log.http') != false && request.log !== false && Request.Log(request, response);
@@ -237,9 +241,24 @@ export default Request = {
 		logs.r = `${logs.m} ${request.url.request} ${logs.H}`,
 		logs.R = `${logs.m} ${request.url} ${logs.H}`,
 		logs.T = (new Date() - request.time) / 1000;
-		logs.u = head['user-agent'];
+		logs.u = head['user-agent'] || '-';
 		logs.U = request.url.request;
 		await app.emit('request.log', logs, request, response);
+
+		// Log body text
+		if (request.method === 'POST') {
+			const trim = app.get('log.trim');
+			const text = app.get('log.trimText');
+			logs.d = JSON.stringify(request.post.data || '{}');
+			if (logs.d.length > trim + 2) {
+				logs.d = [ logs.d[0], logs.d.slice(0, -1), logs.d.slice(-1) ];
+				logs.d[1] = `${logs.d[1].slice(1, trim)} ... ${text.replace('%s', logs.d[1].length - trim)}`;
+				logs.d = logs.d.join('');
+			}
+		} else {
+			logs.d = '';
+		}
+
 		app.log(request.time, app.get('log.http').replace(Request.RegExp.Log, (...i) => console.font(logs[i[1]],
 			   (i[1] === 'a' && 36)
 			|| (i[1] === 'B' && 33)
@@ -251,7 +270,7 @@ export default Request = {
 			|| (i[1] === 'T' && 35)
 			|| (i[1] === 'u' && 90)
 			|| (i[1] === 'U' && 90)
-			|| (0)
-		)));
+			|| ('0')
+		)).replace(/(?:\x1b\[\d+m){2,}/g, '').trim());
 	}
 };

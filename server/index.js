@@ -1,14 +1,15 @@
 import cluster			 from 'node:cluster';
-import fs				 from 'node:fs';
+import fs				 from 'node:fs/promises';
+import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { cpus, tmpdir }	 from 'node:os';
 import { dirname }		 from 'node:path';
 import { fileURLToPath } from 'node:url';
-import						  'hekate/console.js';
-import						  'hekate/primitive/array.js';
-import						  'hekate/primitive/date.js';
-import						  'hekate/primitive/number.js';
-import						  'hekate/primitive/object.js';
-import						  'hekate/primitive/string.js';
+import 'hekate/console.js';
+import 'hekate/primitive/array.js';
+import 'hekate/primitive/date.js';
+import 'hekate/primitive/number.js';
+import 'hekate/primitive/object.js';
+import 'hekate/primitive/string.js';
 
 global.module = {};
 export default global.app = new class Hekate {
@@ -25,17 +26,19 @@ export default global.app = new class Hekate {
 	 * @return {Hekate} Returns the Hekate class attached to the global.app variable.
 	 */
 	constructor () {
-		const root = process.argv[1] + (fs.existsSync(process.argv[1]) ? '' : '.js');
-		Object.defineProperty(this, 'core', { value: fileURLToPath(dirname(import.meta.url)).slice(0, -7) });
-		Object.defineProperty(this, 'root', { value: fs.lstatSync(root).isDirectory() ? root : dirname(root) });
-		Object.defineProperty(this, 'temp', { value: tmpdir() });
-		Object.defineProperty(this, 'package', { value: JSON.parse(fs.readFileSync(`${this.core}/package.json`, 'utf8')) });
+		const root = process.argv[1] + (existsSync(process.argv[1]) ? '' : '.js');
+		this.core = fileURLToPath(dirname(import.meta.url)).slice(0, -7);
+		this.root = lstatSync(root).isDirectory() ? root : dirname(root);
+		this.logs = this.root + '/logs';
+		this.page = this.root + '/content/pages';
+		this.temp = tmpdir();
+		this.package = JSON.parse(readFileSync(`${this.core}/package.json`, 'utf8'));
 		this.package.config.restricted.ip = [];
 		this.package.config.restricted.ua = [];
 		Object.keys(this.package.config).map(i => this.set(i, this.package.config[i]));
 		Object.defineProperty(this.module, 'get', { value: function get (i, file) {
 			return module[i] ? module[i]
-				 : fs.existsSync(file = `${app.root}/content/modules/server/${i}/${i}.js`) ? (module[i] = file)
+				 : existsSync(file = `${app.root}/content/modules/server/${i}/${i}.js`) ? (module[i] = file)
 				 : undefined;
 		}});
 		Object.defineProperty(this.module, 'load', { value: async function load (i) {
@@ -53,6 +56,17 @@ export default global.app = new class Hekate {
 				delete module[i];
 				app.error(e);
 				throw new ReferenceError(`module.${i} not loaded`);
+			}
+		}});
+		Object.defineProperty(this.log, 'to', { value: async function to (file, ...i) {
+			try { await fs.access(`${app.logs}/${file}.log`); }
+			catch (e) { await fs.touch(`${app.logs}/${file}.log`); }
+			try {
+				const time = i[0] instanceof Date ? i.shift() : new Date();
+				console[file === 'stderr' ? 'error' : 'log'](i = [ console.font(time.toString('%c'), 35), ...i ].join(' '));
+				await fs.appendFile(`${app.logs}/${file}.log`, i.replace(Hekate.RegExp.esc, '') + '\n');
+			} catch (e) {
+				console.error(e);
 			}
 		}});
 	};
@@ -97,9 +111,8 @@ export default global.app = new class Hekate {
 				: `${console.font(`file://${e[2]}`, 90)}`) +
 			  console.font(':', 90) + console.font(e[3], 33) + // line
 			  console.font(':', 90) + console.font(e[4], 33) // column
-			: e.stack
-		console.error(e = [ console.font(time.toString('%c'), 35), e ].join(' '));
-		await new Promise(resolve => fs.appendFile(`${this.root}/logs/stderr.log`, e.replace(Hekate.RegExp.esc, '') + '\n', resolve));
+			: e
+		await this.log.to('stderr', e);
 		type === 'unhandledRejection' && process.exit();
 		return false;
 	};
@@ -123,10 +136,7 @@ export default global.app = new class Hekate {
 	 * @return {Boolean} Returns true.
 	 */
 	async log (...i) {
-		const time = i[0] instanceof Date ? i.shift() : new Date();
-		console.log(i = [ console.font(time.toString('%c'), 35), ...i ].join(' '));
-		await new Promise(resolve => fs.appendFile(`${this.root}/logs/stdout.log`, i.replace(Hekate.RegExp.esc, '') + '\n', resolve));
-		return true;
+		return await this.log.to('stdout', ...i);
 	};
 
 	/**

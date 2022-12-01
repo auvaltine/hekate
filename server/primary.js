@@ -13,7 +13,7 @@ export default class Primary {
 
 	static RegExp = {
 		dots: /\./g,
-		logs: /^std(?:err|out)-[0-9]{13,}\.log$/,
+		logs: /-[0-9]{13,}\.log$/,
 		nums: /\D/g
 	};
 
@@ -23,7 +23,6 @@ export default class Primary {
 	 * @return {undefined}
 	 */
 	static async methods () {
-		Object.defineProperty(app, 'page', { value: `${app.root}/content/pages` });
 		http.METHODS.concat([ 'SOCKET' ]).map(i => (i = i.toLowerCase().toCamelCase()) &&
 		Object.defineProperty(app, i, /* Define HTTP routing verbs */ {
 			value: (...args) => i === 'get' && !args[1]
@@ -48,6 +47,7 @@ export default class Primary {
 				return file.isFile() ? {
 					etag: crypto.createHash('md5').update([ file.ino, file.size, file.mtime.getTime() ].join('')).digest('hex'),
 					open: file.atime,
+					mtime: file.mtime,
 					path: path,
 					size: file.size,
 					type: Mime.Type(path)
@@ -74,7 +74,6 @@ export default class Primary {
 	 */
 	constructor () {
 		const work = [];
-		const logs = `${app.root}/logs`;
 		  let core = +app.get('cluster');
 		app.set('cluster', !core || core > cpus().length || isNaN(core) ? cpus().length : core);
 		app.set('cluster.length', 0);
@@ -107,25 +106,22 @@ export default class Primary {
 				.on('connection', i => work[+i?.remoteAddress?.replace(Primary.RegExp.nums, '') % core]?.send({ event: 'connection' }, i)
 					|| i?.destroy())
 				.on('listening', function () { app.log(console.font('Server listening', 32), console.font(`:${this.address().port}`, 33)); });
-			('err|out').split('|').map(i => {
-				let copy = false;
-				i = `${logs}/std${i}`;
-				watch(`${i}.log`, async () => /* Truncate logs when they get larger than <config.log.size> */ {
-					if (!copy && (await fs.stat(`${i}.log`)).size > app.get('log.size')) {
-						copy = true; // file is being copied, be patient
-						await fs.copyFile(`${i}.log`, `${i}-${Date.now()}.log`);
-						await fs.truncate(`${i}.log`);
-						copy = false;
-					}
-				});
+			watch(app.logs, async (event, name) => {
+				if (!watch.copy[name] && !Primary.RegExp.logs.test(name) && (await fs.stat(`${app.logs}/${name}`)).size > app.get('log.size')) {
+					watch.copy[name] = true;
+					await fs.copy(`${app.logs}/${name}`, `${app.logs}/${name.substring(0, name.length - 4)}-${Date.now()}.log`);
+					await fs.truncate(`${app.logs}/${name}`);
+					delete watch.copy[name];
+				}
 			});
+			watch.copy = {};
 			Date.setTask(`0 0 * * *`, async () => /* Remove logs older than <config.log.cycle> days */ {
 				const date = new Date();
 				const time = app.get('log.cycle') * 8.64e+7;
-				for await (let i of await fs.opendir(logs)) {
+				for await (let i of await fs.opendir(app.logs)) {
 					(Primary.RegExp.logs.test(i.name)) &&
-					(await fs.stat(`${logs}/${i.name}`)).mtime - date > time &&
-					(await fs.rm(`${logs}/${i.name}`));
+					(await fs.stat(`${app.logs}/${i.name}`)).mtime - date > time &&
+					(await fs.rm(`${app.logs}/${i.name}`));
 				}
 			});
 			process.on('exit', () => work.map(i => i.kill()));

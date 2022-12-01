@@ -3,6 +3,13 @@ import { transformSync as minify } from '@babel/core';
 import sass						   from 'sass';
 
 export default class Template {
+	
+	static RegExp = {
+		clientPrototype: /^(Hekate\.[\w]+ = )?Hekate\.prototype\.(\w+) = function/,
+		remote: /^https?:\/\//,
+		mini: /\.min\.js$/,
+		tabs: /^(?:  )+/gm
+	};
 
 	static Files = Object.assign(new Map(), {
 
@@ -157,7 +164,7 @@ export default class Template {
 				const tree = [];
 				for await (let i of await fs.opendir(node)) {
 					i.name !== '.' && tree.push('\t' + (await fs.readFile(`${node}/${i.name}`, 'utf8')).trim()
-						.replace(/^(Hekate\.[\w]+ = )?Hekate\.prototype\.(\w+) = function/, (...i) => {
+						.replace(Template.RegExp.clientPrototype, (...i) => {
 							i[1] && code.splice(2, 0, `\tstatic ${i[2]} = Hekate.prototype.${i[2]};`);
 							return i[2];
 						})
@@ -203,7 +210,7 @@ export default class Template {
 		const make = async () => {
 			try {
 				const root = `${node}/scss/index.scss`;
-				await fs.writeFile(full, sass.compile(root, { style: 'expanded' }).css.replace(/^(?:  )+/gm, i => '\t'.repeat(i.length / 2)));
+				await fs.writeFile(full, sass.compile(root, { style: 'expanded' }).css.replace(Template.RegExp.tabs, i => '\t'.repeat(i.length / 2)));
 				await fs.writeFile(thin, sass.compile(root, { style: 'compressed' }).css);
 			} catch (e) { app.error(e); }
 		};
@@ -233,18 +240,21 @@ export default class Template {
 		  let time = 0;
 		const node = `${app.root}${app.get('template.directory')}/js`;
 		const edge = `${node}/../script.min.js`;
-		const mini = /\.min\.js$/;
 		const code = [];
 		try { time = (await fs.stat(edge)).mtime; } catch (e) {}
-		for await (let i of await fs.opendir(node)) {
-			if (i.name[0] !== '.' && !mini.test(i.name)) {
-				this.#js.tree.push(i.name);
-				time === true || ((await fs.stat(`${node}/${i.name}`)).mtime > time && (time = true));
+		for (let i of [
+			...app.get('template.js').map(i => !Template.RegExp.remote.test(i) && `${app.root}/${i[0] === '/' ? i.substring(1) : i}`).filter(Boolean),
+			...(await fs.readdir(node)).map(i => i[0] !== '.' && `${node}/${i}`).filter(Boolean)
+		]) {
+			if (!Template.RegExp.mini.test(i) && (i = await app.file(i))) {
+				this.#js.tree.push(i.path);
+				time === true || (i.mtime > time && (time = true));
 			}
 		}
 		if (time === true) {
+			this.#js.tree.sort();
 			for (let i of this.#js.tree) {
-				code.push(await fs.readFile(`${node}/${i}`, 'utf8'));
+				code.push(await fs.readFile(i, 'utf8'));
 			}
 			await fs.writeFile(edge, minify(code.join('\n'), { comments: false, presets: [ 'minify' ] }).code);
 		}
@@ -279,8 +289,12 @@ export default class Template {
 			),
 			footer: async (get = {}) => get.body = Buffer.from((get.body || '').toString('utf8')
 				.replace(/<\/body>/, [ `${asst}/client${mini ? '.min' : ''}.js` ]
-						.concat(app.get('template.js'))
-						.concat(mini ? [ `${asst}/script.min.js` ] : this.#js.tree.map(i => `${asst}/js/${i}`))
+						.concat(app.get('template.js').filter(i => Template.RegExp.remote.test(i)))
+						.concat(mini
+							? [ `${asst}/script.min.js` ]
+							: app.get('environment') == 'development'
+							? this.#js.tree.map(i => i.substring(app.root.length))
+							: this.#js.tree.map(i => `${asst}/js/${i}`))
 						.filter(Boolean)
 						.map(i => `<script src="${i}"></script>`)
 						.join('\n')
