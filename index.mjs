@@ -231,6 +231,11 @@ class Server {
 				}} catch (e) {}
 				return this.modules(repo.map(i => i.name));
 			})();
+			const done = async () => {
+				await this.run.postinstall();
+				console.log(console.font('UPDATE', 32), 'Didn\'t run into any problems. See ya!');
+				process.exit();
+			};
 
 			console.log(console.font('WARNING', 33), 'If any of your local installations are incompatible with the latest');
 			console.log(console.font('WARNING', 33), '(remote) version, you can choose to update these, or skip them.');
@@ -254,16 +259,16 @@ class Server {
 			}
 
 			// Update Hekate.js node_modules...
-			load = this.loading(console.font('<hekate.js/node_modules>', 90));
-			sh.spawn('npm', [ 'update' ], { cwd: this.root }).on('close', async () => {
-				load.end();
-				await this.run.postinstall();
+			if (await this.prompt(`${console.font('UPDATE', 32)} Do you want to update @core modules?`)) {
 				this.clear();
-				console.log(console.font('UPDATE', 32), console.font('<hekate.js/node_modules>', 90));
-				console.log(console.font('UPDATE', 32), 'Everything up to date');
-				console.log(console.font('UPDATE', 32), 'See ya!');
-				process.exit();
-			}).stderr.on('data', i => this.error(i));
+				load = this.loading(console.font('<hekate.js/node_modules>', 90));
+				sh.spawn('npm', [ 'update' ], { cwd: this.root }).on('close', async () => {
+					load.end();
+					this.clear();
+					console.log(console.font('UPDATE', 32), console.font('<hekate.js/node_modules>', 90));
+					await done();
+				}).stderr.on('data', i => this.error(i));
+			} else await done();
 		}
 
 	};
@@ -355,6 +360,7 @@ class Server {
 		const dirs = [];
 		download: for (const i of local.filter(Boolean)) {
 			const dirs = [];
+			console.log(`${console.font(`<${i.host.name}>`, 90)} ${i.name}`);
 			for (const r of remote[i.name].request) {
 				const name = r.split('/').slice(0, 2).join('/');
 				const file = r.split('/').slice(2).join('/');

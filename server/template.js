@@ -60,11 +60,11 @@ export default class Template {
 				(Template.Files.get('footer') || { body: '\n' }).body
 			]) {
 				buff = await response.template(i, buff.args);
-				html.push(buff.body);
+				html.push(buff?.body || '');
 			}
 			body = html[1] + html[0] + html[2];
 		} catch (e) {
-			console.log(e);
+			app.error(e);
 		}
 		return body;
 	};
@@ -243,7 +243,11 @@ export default class Template {
 		const code = [];
 		try { time = (await fs.stat(edge)).mtime; } catch (e) {}
 		for (let i of [
-			...app.get('template.js').map(i => !Template.RegExp.remote.test(i) && `${app.root}/${i[0] === '/' ? i.substring(1) : i}`).filter(Boolean),
+			...app.get('template.js').map(i => !Template.RegExp.remote.test(i)
+				?   i[0] === '/' ? `${app.root}/${i.substring(1)}`
+				  : i.substring(0, 8) === '@client/' && (i = i.split('/')) ? `${app.root}/content/modules/client/${i[1]}/${i[1]}.js`
+				  : i
+				: undefined).filter(Boolean),
 			...(await fs.readdir(node)).map(i => i[0] !== '.' && `${node}/${i}`).filter(Boolean)
 		]) {
 			if (!Template.RegExp.mini.test(i) && (i = await app.file(i))) {

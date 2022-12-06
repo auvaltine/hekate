@@ -60,10 +60,18 @@ export default global.app = new class Hekate {
 		}});
 		Object.defineProperty(this.log, 'to', { value: async function to (file, ...i) {
 			try { await fs.access(`${app.logs}/${file}.log`); }
-			catch (e) { await fs.touch(`${app.logs}/${file}.log`); }
+			catch (e) {
+				const fh = await fs.open(`${app.logs}/${file}.log`, 'a');
+				await fh.close();
+			}
 			try {
-				const time = i[0] instanceof Date ? i.shift() : new Date();
-				console[file === 'stderr' ? 'error' : 'log'](i = [ console.font(time.toString('%c'), 35), ...i ].join(' '));
+				if (i[i.length - 1] !== false) {
+					i[0] instanceof Date || i.unshift(new Date());
+					i[0] = console.font(i[0].toString('%c'), 35);
+				} else {
+					i.pop();
+				}
+				console[file === 'stderr' ? 'error' : 'log'](i = i.join(' '));
 				await fs.appendFile(`${app.logs}/${file}.log`, i.replace(Hekate.RegExp.esc, '') + '\n');
 			} catch (e) {
 				console.error(e);
@@ -232,6 +240,7 @@ export default global.app = new class Hekate {
 	 */
 	async start () {
 		try { await import(`${this.root}/config.js`); } catch (e) {}
+		try { await import(`${this.root}${app.get('template.directory')}/config.js`); } catch (e) {}
 		cluster.isPrimary
 			? new (await import('./primary.js')).default
 			: new (await import('./server.js')).default

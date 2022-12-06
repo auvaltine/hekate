@@ -31,7 +31,7 @@ export default class Network {
 	 * @return {Network} Returns the IP's network properties.
 	 */
 	constructor (ip) {
-		ip = ip.split('/');
+		ip = ip.replace(/[^\/\d\.]/g, '').split('/');
 		ip[0] = ip[0].split('.');
 		ip[1] = +ip[1] || 32;
 		const mask = '0'.repeat(ip[1]) + '1'.repeat(32 - ip[1]);
@@ -59,7 +59,8 @@ export default class Network {
 	 * @return {Boolean} Returns true or false if the IP is in range.
 	 */
 	includes (ip) {
-		ip = parseInt(Network.ipToBin(ip), 2);
+		ip = ip.replace(/[^\/\d\.]/g, '').split('/');
+		ip = parseInt(Network.ipToBin(ip[0]), 2);
 		return ip >= this.rangeStart && ip <= this.rangeEnd;
 	};
 

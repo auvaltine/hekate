@@ -128,9 +128,9 @@ export default class WebSocket {
 			default: {
 				try { this.payload = JSON.parse(this.payload); }
 				catch (e) { this.payload = { type: this.payload }; }
-				const fns = app.socket.methods.filter(i => i.regexp.test(this.payload.event));
+				const fns = app.on['http.socket'].filter(i => i.match.test(this.payload.event));
 				for (const i of fns) {
-					const emit = await i.fn.call(this.socket, this.payload.event, this.payload.data);
+					const emit = await i.call(this.socket, this.payload.event, this.payload.data);
 					if (emit === false) {
 						break;
 					}

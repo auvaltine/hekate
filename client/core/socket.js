@@ -29,7 +29,7 @@ Hekate.socket = (() => {
 			}
 		};
 		onopen () {
-			this.onmessage({ data: JSON.stringify({ event: 'connection' }) });
+			this.onmessage({ data: JSON.stringify({ event: 'open' }) });
 		};
 		on (event, fn) { this.events.push({ event, fn }); };
 		send (event, data) { this.socket.send(JSON.stringify({ event, data })); };

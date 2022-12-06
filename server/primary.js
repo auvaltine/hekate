@@ -24,14 +24,32 @@ export default class Primary {
 	 */
 	static async methods () {
 		http.METHODS.concat([ 'SOCKET' ]).map(i => (i = i.toLowerCase().toCamelCase()) &&
+
+		/**
+		 * Defines HTTP routing verbs for all methods listed in http.METHODS and "socket".
+		 *
+		 * @param {RegExp|String} pattern: Defines a URL pattern for verbs, event name for socket
+		 * 		".on", or dot-notated string for app.get() configuration option.
+		 * @param {Function} fn: Function that is called when an event is triggered.
+		 * @return {Boolean|undefined}
+		 */
 		Object.defineProperty(app, i, /* Define HTTP routing verbs */ {
 			value: (...args) => i === 'get' && !args[1]
 				? app.set.walk(args[0])
 				: (args[1].match = typeof args[0] === 'string'
 					? new RegExp('^' + args[0].replace(Primary.RegExp.dots, '\\.') + (i === 'socket' ? '(?:\\..+|$)' : '$'))
 					: args[0]) && app.on(`http.${i}`, args[1])
-		}) &&
-		Object.defineProperty(app[i], 'methods', { value: [] }));
+		}));
+
+		/**
+		 * Defines a sender for a WebSocket handler.
+		 *
+		 * @param {String} event: A dot-notated string containing the socket event.
+		 * @param {*} data: The data payload to pass to sockets.
+		 * @param {Array|Stream|String} sockets: A list of sockets, individual socket, or an "_id"
+		 * 		string defining a socket.
+		 * @return {undefined}
+		 */
 		Object.defineProperty(app.socket, 'send', /* Socket message sender */ {
 			value: (event, data, sockets) => process.send({ event: 'socket', data: { event, data }, socket: (
 			  	sockets instanceof stream.Duplex ? [ sockets ]
@@ -40,6 +58,19 @@ export default class Primary {
 				: []
 			).filter(Boolean) })
 		});
+
+		/**
+		 * Checks if a file exists and returns specific properties.
+		 *
+		 * @param {String} path: A string containing the file location.
+		 * @return {Object|undefined} Returns an object if the file exists:
+		 * 		@param {String} etag: MD5 hash of the file identifier, size, and modified time.
+		 * 		@param {Number} open: Unix date when the file was opened.
+		 * 		@param {Number} mtime: Unix date when the file was last modified.
+		 * 		@param {String} path: A string containing the file location.
+		 * 		@param {Number} size: The file's size in bytes.
+		 * 		@param {String} type: A string containing the file's MIME type.
+		 */
 		Object.defineProperty(app, 'file', { value: async function file (path) {
 			try {
 				await fs.access(path);
@@ -54,10 +85,19 @@ export default class Primary {
 				} : undefined;
 			} catch (e) {}
 		}});
-		Object.defineProperty(app, 'l10n', { value: function l10n (lang, session) {
+
+		/**
+		 * Retrieves or sets localization translation keys.
+		 *
+		 * @param {Object|String} lang: As a string, the language identifier to use, or an object
+		 * 		with a key, "lang."
+		 * @param {Object|undefined} keys: An object that defines key-translation strings.
+		 * @return {Object} Returns an object with keys matching the defined language.
+		 */
+		Object.defineProperty(app, 'l10n', { value: function l10n (lang, keys) {
 			if (typeof lang === 'object') { lang = lang.lang || 'en'; }
-			if (typeof lang === 'string' && (lang.length > 2 || session)) {
-				const json = session === undefined ? JSON.parse(readFileSync(lang, 'utf8')) : typeof session === 'object' ? session : {};
+			if (typeof lang === 'string' && (lang.length > 2 || keys)) {
+				const json = keys === undefined ? JSON.parse(readFileSync(lang, 'utf8')) : typeof keys === 'object' ? keys : {};
 				lang = lang.length > 2 ? lang.substring(lang.lastIndexOf('/'), 2) : lang;
 				app.l10n[lang] = Object.merge(app.l10n[lang] || (app.l10n[lang] = {}), json);
 			}
@@ -144,7 +184,7 @@ export default class Primary {
 			http.createServer() // Create an HTTP server to redirect to HTTPS
 				.listen(port, () => app.log(console.font('Server listening', 32), console.font(`:${config.http.port || 80}`, 33)))
 				.on('request', (request, response) => {
-					response.writeHead(301, { 'Location': `https://${domain}${request.url}` });
+					response.writeHead(308, { 'Location': `https://${domain}${request.url}` });
 					response.end();
 				});
 			port = config.https.port.valueOf();

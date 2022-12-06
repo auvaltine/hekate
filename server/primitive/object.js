@@ -5,7 +5,7 @@ Object.defineProperties(Object, {
 			 : false;
 	}},
 	isObject: { value: function isObject (obj) {
-		return obj && Object.prototype.toString(obj) === '[object Object]';
+		return obj && Object.prototype.toString.call(obj) === '[object Object]';
 	}},
 	merge: { value: function merge (...src) {
 		const isMergeable = src => {
@@ -20,11 +20,11 @@ Object.defineProperties(Object, {
 					des = tar.slice();
 					src.forEach(function(e, i) {
 						if (typeof des[i] === 'undefined') {
-							des[i] = e
+							des[i] = e;
 						} else if (isMergeable(e)) {
-							des[i] = Object.merge(tar[i], e)
+							des[i] = Object.merge(tar[i], e);
 						} else if (!~tar.indexOf(e)) {
-							des.push(e)
+							des.push(e);
 						}
 					});
 				} else {
