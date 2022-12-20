@@ -29,7 +29,7 @@ export default Response = {
 	/**
 	 * Sends the response as a JSON-encoded string.
 	 *
-	 * @param {Object} json An object to convert to a JSON string.
+	 * @param {Object} json: An object to convert to a JSON string.
 	 * @return {Boolean} Returns false to stop the request flow.
 	 */
 	async json (json) {
@@ -45,7 +45,7 @@ export default Response = {
 	/**
 	 * Redirects the response with a 302 status.
 	 *
-	 * @param {String} The URL path location to redirect.
+	 * @param {String} path: The URL path location to redirect.
 	 * @return {Boolean} Returns false to stop the request flow.
 	 */
 	redirect (path) {
@@ -58,8 +58,8 @@ export default Response = {
 	/**
 	 * Applies arguments to a template literal string.
 	 *
-	 * @param {String} html The HTML string with ${} properties.
-	 * @param {Object} args Arguments to pass through the HTML for use as <thisArg>.
+	 * @param {String} html: The HTML string with ${} properties.
+	 * @param {Object} args: Arguments to pass through the HTML for use as <thisArg>.
 	 * @return {String} Returns the processed template string.
 	 */
 	async template (html, args) {
@@ -82,7 +82,7 @@ export default Response = {
 	},
 
 	/*
-	 * Processes static files. If app.set.environment is <production>, caching is also enabled here.
+	 * Processes static files. If <config.environment> is <production>, caching is also enabled here.
 	 *
 	 * @return {undefined}
 	 */

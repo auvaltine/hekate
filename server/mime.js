@@ -116,7 +116,7 @@ export default {
 	/**
 	 * Determines if a given type should have a UTF-8 character set.
 	 *
-	 * @param {String} type The MIME type to test.
+	 * @param {String} type: The MIME type to test.
 	 * @return {String} Returns a UTF-8 charset to attach, or an <empty string>.
 	 */
 	Charset (type) {
@@ -126,7 +126,7 @@ export default {
 	/**
 	 * Gets the first matching file type for a given MIME type.
 	 *
-	 * @param {String} type The MIME type.
+	 * @param {String} type: The MIME type.
 	 * @return {String|undefined} Returns the file type or undefined if no MIME type was found.
 	 */
 	Extension (type) {
@@ -136,7 +136,7 @@ export default {
 	/**
 	 * Gets the MIME type for a file.
 	 *
-	 * @param {String} path The fully-qualified path, or simply a file extension.
+	 * @param {String} path: The fully-qualified path, or simply a file extension.
 	 * @return {String} Returns the MIME type, default to <application/octet-stream>.
 	 */
 	Type (path) {

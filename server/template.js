@@ -16,7 +16,7 @@ export default class Template {
 		/**
 		 * Gets file stats and add its contents to the map.
 		 *
-		 * @param {String} path The file location.
+		 * @param {String} path: The file location.
 		 * @return {Boolean|Object} Returns false if no file was found.
 		 */
 		async open (path) {
@@ -37,7 +37,7 @@ export default class Template {
 		/**
 		 * Closes a file if it's part of the map and remove it.
 		 *
-		 * @param {String} path The file identifier.
+		 * @param {String} path: The file identifier.
 		 * @return {undefined}
 		 */
 		async close (path) {
@@ -48,8 +48,8 @@ export default class Template {
 	/**
 	 * Constructs a page with template literals.
 	 *
-	 * @param {Stream} response The HTTP response stream.
-	 * @param {String} body A template string defining the page's body content.
+	 * @param {Stream} response: The HTTP response stream.
+	 * @param {String} body: A template string defining the page's body content.
 	 * @return {String} Returns the parsed template.
 	 */
 	static async Build (response, body) {
@@ -92,8 +92,8 @@ export default class Template {
 	/**
 	 * Watches for changes in the given directory and calls fn.change or fn.rename on an event.
 	 *
-	 * @param {String} dir The directory to watch.
-	 * @param {Object} fn An object containing <.change> and <.rename> functions.
+	 * @param {String} dir: The directory to watch.
+	 * @param {Object} fn: An object containing <.change> and <.rename> functions.
 	 * @return {undefined}
 	 */
 	static async Watch (dir, fn) {
@@ -119,7 +119,7 @@ export default class Template {
 	/**
 	 * Builds template files (HTML, CSS, and JavaScript).
 	 *
-	 * @param {Boolean} primary If running the primary app, <client.js> is rebuilt.
+	 * @param {Boolean} primary: If running the primary app, <client.js> is rebuilt.
 	 * @return {Template}
 	 */
 	constructor (primary) {

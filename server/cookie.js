@@ -4,8 +4,8 @@ export default class Cookie {
 	/**
 	 * Gets a single or list of cookies.
 	 *
-	 * @param {String} cookie The name of the cookie to search for.
-	 * @param {Stream} response The HTTP response stream, containing the "Set-Cookie" header.
+	 * @param {String} cookie: The name of the cookie to search for.
+	 * @param {Stream} response: The HTTP response stream, containing the "Set-Cookie" header.
 	 * @return {Array|Cookie} Returns the list of or a single cookie object.
 	 */
 	static getCookie (cookie, response) {
@@ -18,8 +18,8 @@ export default class Cookie {
 	/**
 	 * Defines a cookie that will be sent with the response.
 	 *
-	 * @param {Cookie|String} cookie The cookie to set.
-	 * @param {Stream} response The HTTP response stream, containing the "Set-Cookie" header.
+	 * @param {Cookie|String} cookie: The cookie to set.
+	 * @param {Stream} response: The HTTP response stream, containing the "Set-Cookie" header.
 	 * @return {String} Returns the "Set-Cookie" response header.
 	 */
 	static setCookie (cookie, response) {
@@ -34,8 +34,8 @@ export default class Cookie {
 	/**
 	 * Removes a cookie from the response.
 	 *
-	 * @param {String} cookie The name of the cookie to search for.
-	 * @param {Stream} response The HTTP response stream, containing the "Set-Cookie" header.
+	 * @param {String} cookie: The name of the cookie to search for.
+	 * @param {Stream} response: The HTTP response stream, containing the "Set-Cookie" header.
 	 * @return {undefined}
 	 */
 	static removeCookie (cookie, response) {
@@ -58,9 +58,9 @@ export default class Cookie {
 	/**
 	 * Searches for a cookie, or creates a new cookie.
 	 *
-	 * @param {Object|String} name A key-value object defining the cookie properties, or a string
+	 * @param {Object|String} name: A key-value object defining the cookie properties, or a string
 	 * 		that is the cookie name.
-	 * @param {Stream} request The HTTP request stream.
+	 * @param {Stream} request: The HTTP request stream.
 	 * @return {Cookie} Returns the cookie properties.
 	 */
 	constructor (name, request) /* Search for a cookie, or create one */ {
@@ -92,8 +92,8 @@ export default class Cookie {
 	/**
 	 * Sets the cookie properties.
 	 *
-	 * @param {String} key The name of the property to set.
-	 * @param {Boolean|Date|String} value The property value.
+	 * @param {String} key: The name of the property to set.
+	 * @param {Boolean|Date|String} value: The property value.
 	 * @return {Cookie} Returns the cookie.
 	 */
 	set (key, value) {
@@ -120,7 +120,7 @@ export default class Cookie {
 	/**
 	 * Serializes the cookie to HTTP-header-safe format or returns the cookie value.
 	 *
-	 * @param {Boolean} value If true, returns the cookie value.
+	 * @param {Boolean} value: If true, returns the cookie value.
 	 * @return {String} Returns the cookie value, or the serialized cookie string.
 	 */
 	toString (value) {

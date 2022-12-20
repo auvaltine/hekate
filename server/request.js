@@ -21,8 +21,8 @@ export default Request = {
 		/**
 		 * Creates request and response properties and methods.
 		 *
-		 * @param {Stream} request The HTTP request stream.
-		 * @param {Stream} response The HTTP response stream.
+		 * @param {Stream} request: The HTTP request stream.
+		 * @param {Stream} response: The HTTP response stream.
 		 * @return {undefined}
 		 */
 		async (request, response) => {
@@ -45,8 +45,8 @@ export default Request = {
 		/**
 		 * Gets the requested URL.
 		 *
-		 * @param {Stream} request The HTTP request stream.
-		 * @param {Stream} response The HTTP response stream.
+		 * @param {Stream} request: The HTTP request stream.
+		 * @param {Stream} response: The HTTP response stream.
 		 * @return {undefined}
 		 */
 		async (request) => {
@@ -63,8 +63,8 @@ export default Request = {
 		/**
 		 * Checks for restricted IP addresses or user agents.
 		 *
-		 * @param {Stream} request The HTTP request stream.
-		 * @param {Stream} response The HTTP response stream.
+		 * @param {Stream} request: The HTTP request stream.
+		 * @param {Stream} response: The HTTP response stream.
 		 * @return {Boolean|undefined} If a restricted match was found, returns false to kill the
 		 * 		connection.
 		 */
@@ -87,8 +87,8 @@ export default Request = {
 		/**
 		 * Gets the requested file location.
 		 *
-		 * @param {Stream} request The HTTP request stream.
-		 * @param {Stream} response The HTTP response stream.
+		 * @param {Stream} request: The HTTP request stream.
+		 * @param {Stream} response: The HTTP response stream.
 		 * @return {undefined}
 		 */
 		async (request) => {
@@ -115,8 +115,8 @@ export default Request = {
 		/**
 		 * Checks for access limits.
 		 *
-		 * @param {Stream} request The HTTP request stream.
-		 * @param {Stream} response The HTTP response stream.
+		 * @param {Stream} request: The HTTP request stream.
+		 * @param {Stream} response: The HTTP response stream.
 		 * @return {Boolean} Returns false if too many requests attached to the client's IP address.
 		 */
 		async (request, response) => {
@@ -139,8 +139,8 @@ export default Request = {
 		/**
 		 * Runs module requests and HTTP verb listeners.
 		 *
-		 * @param {Stream} request The HTTP request stream.
-		 * @param {Stream} response The HTTP response stream.
+		 * @param {Stream} request: The HTTP request stream.
+		 * @param {Stream} response: The HTTP response stream.
 		 * @return {*} Returns the value of the last triggered listener.
 		 */
 		async (request, response, emit) => {
@@ -168,8 +168,8 @@ export default Request = {
 		/**
 		 * Builds the page and sends it to the client.
 		 *
-		 * @param {Stream} request The HTTP request stream.
-		 * @param {Stream} response The HTTP response stream.
+		 * @param {Stream} request: The HTTP request stream.
+		 * @param {Stream} response: The HTTP response stream.
 		 * @return {undefined}
 		 */
 		async (request, response) => {

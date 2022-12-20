@@ -4,7 +4,7 @@ export default {
 	/**
 	 * Sets up a new client limiter for the given IP address.
 	 *
-	 * @param {String} ip The client's IP address.
+	 * @param {String} ip: The client's IP address.
 	 * @return {Object} Returns the limiter object if one exists or was created.
 	 */
 	Client (ip) {
@@ -37,9 +37,9 @@ export default {
 	/**
 	 * Sets the response rate headers and prevents access if limit reached.
 	 *
-	 * @param {Stream} request The HTTP request stream.
-	 * @param {Stream} response The HTTP response stream.
-	 * @param {Object} i The client's request limiter.
+	 * @param {Stream} request: The HTTP request stream.
+	 * @param {Stream} response: The HTTP response stream.
+	 * @param {Object} i: The client's request limiter.
 	 * @return {Boolean} Returns true if the request limit has not been reached, or false if it has.
 	 */
 	Headers (request, response, i) {

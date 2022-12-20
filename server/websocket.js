@@ -7,7 +7,7 @@ export default class WebSocket {
 	/**
 	 * Pings a client with a keep-alive packet.
 	 *
-	 * @param {Stream} socket The client's socket to ping.
+	 * @param {Stream} socket: The client's socket to ping.
 	 * @return {Promise} Returns a promise to end on the next ping.
 	 */
 	static Ping (socket) {
@@ -20,8 +20,8 @@ export default class WebSocket {
 	/**
 	 * Sends a message to a client.
 	 *
-	 * @param {String} data The data message to send.
-	 * @param {Stream} sock The client's socket to receive the message.
+	 * @param {String} data: The data message to send.
+	 * @param {Stream} sock: The client's socket to receive the message.
 	 * @param {String|undefined} Returns the data message if it was successfully sent.
 	 */
 	static Send (data, sock) {
@@ -68,8 +68,8 @@ export default class WebSocket {
 	/**
 	 * Creates a WebSocket listener.
 	 *
-	 * @param {Stream} request The HTTP request stream.
-	 * @param {Stream} socket The client's socket stream.
+	 * @param {Stream} request: The HTTP request stream.
+	 * @param {Stream} socket: The client's socket stream.
 	 * @return {WebSocket}
 	 */
 	constructor (request, socket) {
@@ -92,10 +92,9 @@ export default class WebSocket {
 	/**
 	 * Parses a message received from the client.
 	 *
-	 * When the message is fully constructed, it's passed as a payload to an HTTP verb event defined
-	 * on <app.socket>.
+	 * When the message is fully constructed, it's passed as a payload to an HTTP verb event defined on <app.socket>.
 	 *
-	 * @param {Buffer} data A data packet to parse.
+	 * @param {Buffer} data: A data packet to parse.
 	 * @return {WebSocket}
 	 */
 	async message (data) {

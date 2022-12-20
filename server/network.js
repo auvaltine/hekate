@@ -7,7 +7,7 @@ export default class Network {
 	/**
 	 * Converts a dot-notated IP address to its binary equivalent.
 	 *
-	 * @param {String} ip The IP address to convert.
+	 * @param {String} ip: The IP address to convert.
 	 * @return {String} Returns a binary string matching the IP address.
 	 */
 	static ipToBin (ip) {
@@ -17,7 +17,7 @@ export default class Network {
 	/**
 	 * Convert a binary number to its dot-notated IP address.
 	 *
-	 * @param {String} bin The binary string to convert.
+	 * @param {String} bin: The binary string to convert.
 	 * @return {String} Returns an IP address.
 	 */
 	static binToIp (bin) {
@@ -27,7 +27,7 @@ export default class Network {
 	/**
 	 * Builds the network properties of a given IP address.
 	 *
-	 * @param {String} ip The IP address to evaluate.
+	 * @param {String} ip: The IP address to evaluate.
 	 * @return {Network} Returns the IP's network properties.
 	 */
 	constructor (ip) {
@@ -55,7 +55,7 @@ export default class Network {
 	/**
 	 * Check if the given IP address is in the network range.
 	 *
-	 * @param {String} ip The IP address to search for.
+	 * @param {String} ip: The IP address to search for.
 	 * @return {Boolean} Returns true or false if the IP is in range.
 	 */
 	includes (ip) {

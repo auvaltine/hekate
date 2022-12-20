@@ -1,8 +1,8 @@
 /**
  * Styles text with shell options.
  *
- * @param {String} text The standard input text value.
- * @param {String|Number} opts Accepts options and values as a string, or color code as a number.
+ * @param {String} text: The standard input text value.
+ * @param {String|Number} opts: Accepts options and values as a string, or color code as a number.
  * 		-c <color:name|value>
  * 		-s <italic|strike|underline>
  * 		-w <:empty>

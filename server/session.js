@@ -12,8 +12,8 @@ export default class Session {
 	/**
 	 * Searches for an already active session by the <session> cookie value.
 	 *
-	 * @param {String} cookie The session cookie.
-	 * @param {Stream} request The HTTP request stream.
+	 * @param {String} cookie: The session cookie.
+	 * @param {Stream} request: The HTTP request stream.
 	 * @return {Session} Returns an existing or new session.
 	 */
 	static Find (cookie, request) {
@@ -28,8 +28,8 @@ export default class Session {
 	/**
 	 * Creates a session.
 	 *
-	 * @param {String} _id A session ID to use as the cookie value.
-	 * @param {Stream} request The HTTP request stream.
+	 * @param {String} _id: A session ID to use as the cookie value.
+	 * @param {Stream} request: The HTTP request stream.
 	 * @return {Session}
 	 */
 	constructor (_id, request) {
@@ -48,7 +48,7 @@ export default class Session {
 	/**
 	 * Resets the expiration on each session access.
 	 *
-	 * Default 15 min / 900000 ms, defined by <app.set.session.expires>
+	 * Default 15 min / 900000 ms, defined by <config.session.expires>
 	 *
 	 * @return {Session}
 	 */

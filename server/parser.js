@@ -28,7 +28,7 @@ export default class Parser {
 	/**
 	 * Parses a POSTed HTTP request for its parts.
 	 *
-	 * @param {Stream} The HTTP request stream.
+	 * @param {Stream} request: The HTTP request stream.
 	 * @return {Parser}
 	 */
 	constructor (request) {
@@ -61,8 +61,8 @@ export default class Parser {
 	/**
 	 * Handles requests defined as "multipart".
 	 *
-	 * @param {Buffer} chunk A chunked part of the request stream.
-	 * @param {Number} bytes The number of bytes in the chunk buffer.
+	 * @param {Buffer} chunk: A chunked part of the request stream.
+	 * @param {Number} bytes: The number of bytes in the chunk buffer.
 	 * @return {Parser}
 	 */
 	async multipart (chunk, bytes) {
@@ -134,8 +134,8 @@ export default class Parser {
 	/**
 	 * Handles requests defined as "application/json".
 	 *
-	 * @param {Buffer} chunk A chunked part of the request stream.
-	 * @param {Number} bytes The number of bytes in the chunk buffer.
+	 * @param {Buffer} chunk: A chunked part of the request stream.
+	 * @param {Number} bytes: The number of bytes in the chunk buffer.
 	 * @return {Parser}
 	 */
 	async json (chunk, bytes) { this.data.push(chunk); };
@@ -143,8 +143,8 @@ export default class Parser {
 	/**
 	 * Handles requests defined as "urlencoded" or default.
 	 *
-	 * @param {Buffer} chunk A chunked part of the request stream.
-	 * @param {Number} bytes The number of bytes in the chunk buffer.
+	 * @param {Buffer} chunk: A chunked part of the request stream.
+	 * @param {Number} bytes: The number of bytes in the chunk buffer.
 	 * @return {Parser}
 	 */
 	async urlencoded (chunk, bytes) { this.data.push(chunk); };

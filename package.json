@@ -1,6 +1,6 @@
 {
 	"name": "hekate",
-	"version": "1.0.0",
+	"version": "1.0.0-nightly+20221220",
 	"description": "JavaScript witchcraft: magically lightweight, nimble, comprehensive, full stack web framework.",
 	"homepage": "https://hekate.app/@core",
 	"funding": "https://hekate.app/donate",
@@ -9,7 +9,8 @@
 		"url": "https://hekate.app/r/hekate"
 	},
 	"bugs": {
-		"email": "hi@hekate.app"
+		"email": "hi@hekate.app",
+		"url": "https://github.com/auvaltine/hekate/issues"
 	},
 	"license": "ISC",
 	"author": {
@@ -52,7 +53,6 @@
 		"@babel/core": "^7.19.0",
 		"babel-preset-minify": "^0.5.0",
 		"mongodb": "^4.9.0",
-		"sass": "^1.54.0",
-		"semver": "^7.3.8"
+		"sass": "^1.54.0"
 	}
 }

@@ -85,8 +85,8 @@ export default global.app = new class Hekate {
 	 * If a handler method returns anything other than undefined, no additional parameters will be
 	 * called. If one returns false, the emit function also returns false.
 	 *
-	 * @param {String} event The name of the event to trigger.
-	 * @param {*} ...data Additional parameters used as data passed to the event handler.
+	 * @param {String} event: The name of the event to trigger.
+	 * @param {*} ...data: Additional parameters used as data passed to the event handler.
 	 * @return {*} Returns the value of the event handlers.
 	 */
 	async emit (event, ...data) {
@@ -106,8 +106,8 @@ export default global.app = new class Hekate {
 	/**
 	 * Processes error messages. If the error wasn't handled, exit the process.
 	 *
-	 * @param {Error} e The error stack.
-	 * @param {String} type The error caller.
+	 * @param {Error} e: The error stack.
+	 * @param {String} type: The error caller.
 	 * @return {Boolean} Returns false.
 	 */
 	async error (e, type) {
@@ -128,7 +128,7 @@ export default global.app = new class Hekate {
 	/**
 	 * Gets the value of a configuration setting.
 	 *
-	 * @param {String} key A dot-notated string that is the setting name.
+	 * @param {String} key: A dot-notated string that is the setting name.
 	 * @return {*} Returns the value of the setting if found. Returns undefined otherwise.
 	 */
 	get (key) {
@@ -140,7 +140,7 @@ export default global.app = new class Hekate {
 	 *
 	 * If the first parameter is a {Date}, it will be used as the timestamp.
 	 *
-	 * @param {*} ...i All arguments will be converted to strings before logging.
+	 * @param {*} ...i: All arguments will be converted to strings before logging.
 	 * @return {Boolean} Returns true.
 	 */
 	async log (...i) {
@@ -150,7 +150,7 @@ export default global.app = new class Hekate {
 	/**
 	 * Prepare a module for loading.
 	 *
-	 * @param {Array|Function|String} name A string will be split by commas and the resulting array
+	 * @param {Array|Function|String} name: A string will be split by commas and the resulting array
 	 * 		defines each module to load. If it's a function, it is used as the [request] method and
 	 * 		triggers on each page load.
 	 * @return {undefined}
@@ -167,8 +167,8 @@ export default global.app = new class Hekate {
 	/**
 	 * Removes a handler method from an event.
 	 *
-	 * @param {String} event The event name.
-	 * @param {Function} fn The handler method that would be used when an event triggers.
+	 * @param {String} event: The event name.
+	 * @param {Function} fn: The handler method that would be used when an event triggers.
 	 * @return {undefined}
 	 */
 	off (event, fn) {
@@ -187,8 +187,8 @@ export default global.app = new class Hekate {
 	 * A "fn.once = true" key can be attached to the method to dictate that the handler be called
 	 * only one time.
 	 *
-	 * @param {String} event The event name.
-	 * @param {Function} fn The handler method that will be called on the event.
+	 * @param {String} event: The event name.
+	 * @param {Function} fn: The handler method that will be called on the event.
 	 * @return {undefined}
 	 */
 	on (event, fn) {
@@ -199,8 +199,8 @@ export default global.app = new class Hekate {
 	/**
 	 * Adds a handler method that will be used once when an event is emitted.
 	 *
-	 * @param {String} event The event name.
-	 * @param {Function} fn The handler method that will be called on the event.
+	 * @param {String} event: The event name.
+	 * @param {Function} fn: The handler method that will be called on the event.
 	 * @return {undefined}
 	 */
 	once (event, fn) {
@@ -215,8 +215,8 @@ export default global.app = new class Hekate {
 	 * If the setting is already defined as an array, additional values will be pushed into the
 	 * existing array.
 	 *
-	 * @param {String} key A dot-notated string that is the setting name.
-	 * @param {*} value The value of the setting.
+	 * @param {String} key: A dot-notated string that is the setting name.
+	 * @param {*} value: The value of the setting.
 	 * @return {*} Returns the setting value.
 	 */
 	set (key, value) {
