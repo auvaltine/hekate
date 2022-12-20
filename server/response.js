@@ -118,6 +118,7 @@ export default Response = {
 	 */
 	async dynamic () {
 		const request = this.req;
+		const html = `${app.root}${app.get('template.directory')}/html`;
 		let file = typeof request.file !== 'object' ? {} : request.file;
 		let body = file.body || '';
 		try {
@@ -129,7 +130,7 @@ export default Response = {
 				body = file.raw ? body : await Template.Build(this, body);
 			} else {
 				this.statusCode = 404;
-				body = (file = Template.Files.get('404'))
+				body = (file = Template.Files.get(`${html}/404.html`))
 					 ? await Template.Build(this, file.body)
 					 : `<!DOCTYPE html><html><body><h1>404 Page Not Found</h1></body></html>`;
 			}
@@ -137,7 +138,7 @@ export default Response = {
 			this.statusCode = 500;
 			try {
 				this.view.error = e;
-				file = Template.Files.get('500');
+				file = Template.Files.get(`${html}/500.html`);
 				body = await Template.Build(this, file.body);
 			} catch (i) {
 				body = `<!DOCTYPE html><html><body><h1>500 Internal Server Error</h1><pre>${e}</pre></body></html>`;

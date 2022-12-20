@@ -55,7 +55,7 @@ export default global.app = new class Hekate {
 			} catch (e) {
 				delete module[i];
 				app.error(e);
-				throw new ReferenceError(`module.${i} not loaded`);
+				app.error(console.font(`ReferenceError: module.${i} not loaded`, 31));
 			}
 		}});
 		Object.defineProperty(this.log, 'to', { value: async function to (file, ...i) {
@@ -115,7 +115,7 @@ export default global.app = new class Hekate {
 		e = (e = String(e.stack).match(Hekate.RegExp.error) || e).length === 5
 			? `${console.font(e[1], 31)} at ` + // error
 			  (e[2].indexOf(this.root) === 0
-			  	? `${console.font(`file://${e[2].substring(0, this.root.length)}/`, 90)}${e[2].substring(this.root.length + 1)}`
+				  ? `${console.font(`file://${e[2].substring(0, this.root.length)}/`, 90)}${e[2].substring(this.root.length + 1)}`
 				: `${console.font(`file://${e[2]}`, 90)}`) +
 			  console.font(':', 90) + console.font(e[3], 33) + // line
 			  console.font(':', 90) + console.font(e[4], 33) // column
@@ -159,7 +159,7 @@ export default global.app = new class Hekate {
 		if (typeof name === 'function') {
 			module[name] = name;
 		} else {
-			name = name instanceof Array ? name : typeof name === 'string' ? name.split(Hekate.ws) : [];
+			name = name instanceof Array ? name : typeof name === 'string' ? name.split(Hekate.RegExp.ws) : [];
 			name.map(this.module.get);
 		}
 	};

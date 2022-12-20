@@ -12,8 +12,8 @@ import Template				   from 'hekate/template.js';
 export default class Primary {
 
 	static RegExp = {
+		archive: /-[0-9]{13,}\.log$/,
 		dots: /\./g,
-		logs: /-[0-9]{13,}\.log$/,
 		nums: /\D/g
 	};
 
@@ -52,7 +52,7 @@ export default class Primary {
 		 */
 		Object.defineProperty(app.socket, 'send', /* Socket message sender */ {
 			value: (event, data, sockets) => process.send({ event: 'socket', data: { event, data }, socket: (
-			  	sockets instanceof stream.Duplex ? [ sockets ]
+				  sockets instanceof stream.Duplex ? [ sockets ]
 				: sockets instanceof Array ? sockets.map(i => i instanceof stream.Duplex ? i._id : typeof i === 'string' ? i : undefined)
 				: typeof sockets === 'string' ? [ sockets ]
 				: []
@@ -90,7 +90,7 @@ export default class Primary {
 		 * Retrieves or sets localization translation keys.
 		 *
 		 * @param {Object|String} lang: As a string, the language identifier to use, or an object
-		 * 		with a key, "lang."
+		 * 		with a key, "lang" (e.g., <request.session>).
 		 * @param {Object|undefined} keys: An object that defines key-translation strings.
 		 * @return {Object} Returns an object with keys matching the defined language.
 		 */
@@ -113,59 +113,89 @@ export default class Primary {
 	 * @return {Primary}
 	 */
 	constructor () {
+		this.logs();
+		(async () => {
+			await new Template(true);
+			await this.cluster();
+		})();
+	};
+
+	/**
+	 * Forks child processes onto available cores to distribute server load.
+	 *
+	 * @return {undefined}
+	 */
+	async cluster () {
 		const work = [];
 		  let core = +app.get('cluster');
 		app.set('cluster', !core || core > cpus().length || isNaN(core) ? cpus().length : core);
 		app.set('cluster.length', 0);
 		core = app.get('cluster').valueOf();
-		(async () => {
-			for (let i = 0; i < core; i++) {
-				(function fork (i) {
-					work[i] = cluster.fork();
-					work[i].on('error', app.error.bind(app));
-					work[i].on('exit', (worker, code) => {
-						app.set('cluster.loaded', app.get('cluster.loaded') - 1);
-						code === 'SIGKILL' ? process.kill(process.pid, code) : fork(i);
-					});
-					work[i].on('message', i => {
-						switch (i.event) {
-							case 'listen': {
-								app.set('cluster.length', app.get('cluster.length') + 1);
-								app.log(console.font('Worker listening', 32), console.font(`:${i.data}`, 33));
-								app.get('cluster').valueOf() === app.get('cluster.length').valueOf()
-									&& app.log(console.font('Ready', 32), `(PID:${console.font(process.pid, 33)})`);
-								break;
-							}
-							case 'socket': work.map(w => w.send({ event: 'socket', data: i.data, sockets: i.sockets })); break;
-						}
-					});
-				})(i);
+		function fork (i) {
+			work[i] = cluster.fork();
+			work[i].on('error', app.error.bind(app));
+			work[i].on('exit', (worker, code) => {
+				app.set('cluster.loaded', app.get('cluster.loaded') - 1);
+				code === 'SIGKILL' ? process.kill(process.pid, code) : fork(i);
+			});
+			work[i].on('message', i => {
+				switch (i.event) {
+					case 'template': {
+						console.log(i);
+						break;
+					}
+					case 'listen': {
+						app.set('cluster.length', app.get('cluster.length') + 1);
+						app.log(console.font('Worker listening', 32), console.font(`:${i.data}`, 33));
+						app.get('cluster').valueOf() === app.get('cluster.length').valueOf()
+							&& app.log(console.font('Ready', 32), `(PID:${console.font(process.pid, 33)})`);
+						break;
+					}
+					case 'socket': work.map(w => w.send({ event: 'socket', data: i.data, sockets: i.sockets })); break;
+				}
+			});
+		};
+		for (let i = 0; i < core; i++) {
+			fork(i);
+		}
+		(await this.server())
+			.on('connection', conn => {
+				const i = +conn?.remoteAddress?.replace(Primary.RegExp.nums, '') % core;
+				work[i]?.send({ event: 'connection' }, conn) || conn?.destroy();
+			})
+			.on('listening', function () {
+				app.log(console.font('Server listening', 32), console.font(`:${this.address().port}`, 33));
+			});
+		process.on('exit', () => work.map(i => i.kill()));
+	}
+
+	/**
+	 * Cycles log files that reach too large a size and are too old.
+	 *
+	 * @return {undefined}
+	 */
+	logs () {
+		watch(app.logs, async (event, name) => {
+			if (!watch.archiving[name]
+				&& !Primary.RegExp.archive.test(name)
+				&& (await fs.stat(`${app.logs}/${name}`)).size > app.get('log.size')
+			) {
+				watch.archiving[name] = true;
+				await fs.copy(`${app.logs}/${name}`, `${app.logs}/${name.substring(0, name.length - 4)}-${Date.now()}.log`);
+				await fs.truncate(`${app.logs}/${name}`);
+				delete watch.archiving[name];
 			}
-			(await new Template(true));
-			(await this.server())
-				.on('connection', i => work[+i?.remoteAddress?.replace(Primary.RegExp.nums, '') % core]?.send({ event: 'connection' }, i)
-					|| i?.destroy())
-				.on('listening', function () { app.log(console.font('Server listening', 32), console.font(`:${this.address().port}`, 33)); });
-			watch(app.logs, async (event, name) => {
-				if (!watch.copy[name] && !Primary.RegExp.logs.test(name) && (await fs.stat(`${app.logs}/${name}`)).size > app.get('log.size')) {
-					watch.copy[name] = true;
-					await fs.copy(`${app.logs}/${name}`, `${app.logs}/${name.substring(0, name.length - 4)}-${Date.now()}.log`);
-					await fs.truncate(`${app.logs}/${name}`);
-					delete watch.copy[name];
-				}
-			});
-			watch.copy = {};
-			Date.setTask(`0 0 * * *`, async () => /* Remove logs older than <config.log.cycle> days */ {
-				const date = new Date();
-				const time = app.get('log.cycle') * 8.64e+7;
-				for await (let i of await fs.opendir(app.logs)) {
-					(Primary.RegExp.logs.test(i.name)) &&
-					(await fs.stat(`${app.logs}/${i.name}`)).mtime - date > time &&
-					(await fs.rm(`${app.logs}/${i.name}`));
-				}
-			});
-			process.on('exit', () => work.map(i => i.kill()));
-		})();
+		});
+		watch.archiving = {};
+		Date.setTask(`0 0 * * *`, async () => /* Remove logs older than <config.log.cycle> days */ {
+			const date = new Date();
+			const time = app.get('log.cycle') * 8.64e+7;
+			for await (let i of await fs.opendir(app.logs)) {
+				(Primary.RegExp.logs.test(i.name)) &&
+				(await fs.stat(`${app.logs}/${i.name}`)).mtime - date > time &&
+				(await fs.rm(`${app.logs}/${i.name}`));
+			}
+		});
 	};
 
 	/**

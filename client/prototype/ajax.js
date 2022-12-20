@@ -43,8 +43,11 @@ Hekate.ajax = Hekate.prototype.ajax = function (opts, fn) {
 					file = null;
 				}
 				if (file) {
-					elem[0] !== window && elem.html(file, 'append');
-					file.on('load', () => ++loaded === opts.url.length && opts.complete.call(this));
+					(elem[0] === window ? new Hekate('body') : elem).html(file, 'append');
+					file.on('load', () => {
+						opts.each.call(this, file[0]);
+						++loaded === opts.url.length && opts.complete.call(this);
+					});
 				}
 				return;
 			} else if (elem.is('form')) {
@@ -65,12 +68,17 @@ Hekate.ajax = Hekate.prototype.ajax = function (opts, fn) {
 				let text = xhr.responseText.trim();
 				switch (type) {
 					case 'json': { text = JSON.parse(text || '[]'); break; }
+					case 'html':
 					case 'svg':
-					case 'xml': { text = new Hekate(text, type); opts.position && elem.html(text, opts.position); break; }
-					case 'html': { find[2] && (text = new Hekate(text).filter(find[2])) && elem[0] !== window && elem.html(text); break; }
+					case 'xml': {
+						text = new Hekate(text, type === 'html' ? undefined : type);
+						find[2] && (text = text.filter(find[2]));
+						elem[0] !== window && elem.html(text, opts.position);
+						break;
+					}
 				}
 				elem.emit('ajax', { response: text, url: href });
-				opts.each.call(this, xhr, i);
+				opts.each.call(this, xhr, text, i);
 				if (++loaded === opts.url.length) {
 					opts.complete.call(this, text);
 					elem.emit('ajax.complete', { response: text, url: href });

@@ -249,7 +249,7 @@ export default Request = {
 		if (request.method === 'POST') {
 			const trim = app.get('log.trim');
 			const text = app.get('log.trimText');
-			logs.d = JSON.stringify(request.post.data || '{}');
+			logs.d = JSON.stringify(request.post?.data || '{}');
 			if (logs.d.length > trim + 2) {
 				logs.d = [ logs.d[0], logs.d.slice(0, -1), logs.d.slice(-1) ];
 				logs.d[1] = `${logs.d[1].slice(1, trim)} ... ${text.replace('%s', logs.d[1].length - trim)}`;

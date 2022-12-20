@@ -6,9 +6,9 @@ export default class Template {
 	
 	static RegExp = {
 		clientPrototype: /^(Hekate\.[\w]+ = )?Hekate\.prototype\.(\w+) = function/,
+		html: /(?:^|\/)[^\.][^\/]*\.html$/i,
 		remote: /^https?:\/\//,
-		mini: /\.min\.js$/,
-		tabs: /^(?:  )+/gm
+		mini: /\.min\.js$/
 	};
 
 	static Files = Object.assign(new Map(), {
@@ -16,30 +16,32 @@ export default class Template {
 		/**
 		 * Gets file stats and add its contents to the map.
 		 *
-		 * @param {String} name An identifier for the file.
 		 * @param {String} path The file location.
 		 * @return {Boolean|Object} Returns false if no file was found.
 		 */
-		async open (name, path) {
-			path === undefined && (path = name);
+		async open (path) {
 			try {
+				  let fn   = Template.On.open?.[path] || (() => {});
 				const file = await app.file(path);
-				file.body = await fs.readFile(file.path);
-				this.set(name, file);
+				const body = await fs.readFile(file.path);
+				fn = fn(body);
+				file.body = fn === undefined ? body : fn;
+				file.body = file.body instanceof Buffer ? file.body : typeof file.body === 'string' ? Buffer.from(file.body) : '';
+				this.set(file.path, file);
 				return file;
 			} catch (e) {
-				return false;
+				return app.error(e);
 			}
 		},
 
 		/**
 		 * Closes a file if it's part of the map and remove it.
 		 *
-		 * @param {String} name The file identifier.
+		 * @param {String} path The file identifier.
 		 * @return {undefined}
 		 */
-		async close (name) {
-			this.has(name) && this.delete(name);
+		async close (path) {
+			this.has(path) && this.delete(path);
 		}
 	});
 
@@ -48,16 +50,17 @@ export default class Template {
 	 *
 	 * @param {Stream} response The HTTP response stream.
 	 * @param {String} body A template string defining the page's body content.
-	 * @param {String} Returns the parsed template.
+	 * @return {String} Returns the parsed template.
 	 */
 	static async Build (response, body) {
 		try {
 			const html = [];
+			const file = `${app.root}${app.get('template.directory')}/html`;
 			let buff = {};
 			for (const i of [
 				body,
-				(Template.Files.get('header') || { body: '\n' }).body,
-				(Template.Files.get('footer') || { body: '\n' }).body
+				(Template.Files.get(`${file}/header.html`) || { body: '\n' }).body,
+				(Template.Files.get(`${file}/footer.html`) || { body: '\n' }).body
 			]) {
 				buff = await response.template(i, buff.args);
 				html.push(buff?.body || '');
@@ -70,20 +73,47 @@ export default class Template {
 	};
 
 	/**
+	 * Assigns an event listener to a file location.
+	 *
+	 * @param {String} event: The name of the event (e.g., open).
+	 * @param {String} path: The file location.
+	 * @param {Function} fn: A function to call when the event triggers.
+	 * 		@param {Buffer} data: The buffer contents of the file.
+	 * 		@return {Buffer|String|undefined} The return value that will be assigned to the file.
+	 * 			If the value is a string, it will be converted to a buffer. If it is undefined, the
+	 * 			original buffer value is used.
+	 * @return {undefined}
+	 */
+	static On (event, path, fn) {
+		Template.On[event] || (Template.On[event] = {});
+		Template.On[event][path] = fn;
+	};
+
+	/**
 	 * Watches for changes in the given directory and calls fn.change or fn.rename on an event.
 	 *
 	 * @param {String} dir The directory to watch.
 	 * @param {Object} fn An object containing <.change> and <.rename> functions.
 	 * @return {undefined}
 	 */
-	static Watch (dir, fn) {
-		(async () => {
-			for await (const event of await fs.watch(dir)) {
-				const name = event.filename.substring(0, event.filename.lastIndexOf('.'));
-				const path = `${dir}/${event.filename}`;
-				fn[event.eventType] && await fn[event.eventType](name, path);
+	static async Watch (dir, fn) {
+		let i;
+		if ((await fs.stat(dir)).isDirectory()) {
+			for await (const i of await fs.watch(dir)) {
+				if (fn[i.eventType]) try {
+					await fs.access(`${dir}/${i.filename}`);
+					await fn[i.eventType](`${dir}/${i.filename}`);
+				} catch (e) {}
 			}
-		})();
+		} else {
+			for await (const i of await fs.watch(dir)) {
+				if (fn[i.eventType]) try {
+					await fs.access(dir);
+					await fn[i.eventType](dir);
+					await Template.Watch(dir, fn);
+				} catch (e) {}
+			}
+		}
 	};
 
 	/**
@@ -204,30 +234,50 @@ export default class Template {
 	 * @return {Template}
 	 */
 	async #scss () {
-		const node = `${app.root}${app.get('template.directory')}`;
-		const full = `${node}/style.css`;
-		const thin = `${node}/style.min.css`;
+		const root = `${app.root}${app.get('template.directory')}`;
+		const full = `${root}/style.css`;
+		const thin = `${root}/style.min.css`;
 		const make = async () => {
 			try {
-				const root = `${node}/scss/index.scss`;
-				await fs.writeFile(full, sass.compile(root, { style: 'expanded' }).css.replace(Template.RegExp.tabs, i => '\t'.repeat(i.length / 2)));
-				await fs.writeFile(thin, sass.compile(root, { style: 'compressed' }).css);
+				const scss = (await fs.readFile(`${root}/scss/index.scss`)) + (await Promise.all(app.get('template.css')
+					.filter(i => i[0] === '/')
+					.map(async i => {
+						try {
+							await fs.access(`${app.root}${i}`);
+							return `@import '${app.root}${i}';`;
+						} catch (e) {}
+					})))
+					.join('\n');
+				for (const i of [ 'compressed', 'expanded' ]) {
+					await new Promise(resolve => sass.render({
+						data: scss,
+						includePaths: [ root + '/scss' ],
+						indentType: 'tab',
+						indentWidth: 1,
+						outputStyle: i
+					}, async (e, result) => resolve(e ? app.error(e) : await fs.writeFile(i === 'expanded' ? full : thin, result.css))));
+				}
 			} catch (e) { app.error(e); }
 		};
 		(await (async function scan (node) /* Get a list of directories to watch for changes */ {
-			const dirs = [ node ];
-			for await (const i of await fs.opendir(node)) {
-				i.isDirectory() && dirs.push(...(await scan(`${node}/${i.name}`)));
+			const dirs = [];
+			for (let i of node instanceof Array ? node : [ node ]) {
+				if (i[0] === '/') try {
+					await fs.access(i = `${app.root}${i}`);
+					const path = await fs.stat(i);
+					dirs.push(i);
+					if (path.isDirectory()) {
+						for await (const file of await fs.opendir(i)) {
+							file.isDirectory() && dirs.push(...(await scan(`${i}/${file.name}`)));
+						}
+					}
+				} catch (e) {}
 			}
 			return dirs;
-		})(`${node}/scss`)).map(i => Template.Watch(i, { rename: make, change: make }));
-		try {
-			await fs.access(full);
-			await fs.access(thin);
-		} catch (e) {
-			make();
-		}
-		await Template.Files.open('style', app.get('environment') == 'production' ? thin : full);
+		})([ `${app.get('template.directory')}/scss` ].concat(app.get('template.css').filter(i => i[0] === '/'))))
+			.map(i => Template.Watch(i, { rename: make, change: make }));
+		await make();
+		await Template.Files.open(app.get('environment') == 'production' ? thin : full);
 	};
 
 	/**
@@ -272,40 +322,32 @@ export default class Template {
 	async #html () {
 		  let load;
 		const asst = app.get('template.directory');
-		const node = `${app.root}${app.get('template.directory')}/html`;
-		const mini = app.get('environment') == 'production';
-		const chng = async (name, path) => {
+		const prod = app.get('environment') == 'production';
+		const devl = app.get('environment') == 'development';
+		const root = await fs.opendir(`${app.root}${asst}/html`);
+		const make = async path => {
 			try {
+				if (!Template.RegExp.html.test(path)) { throw new TypeError('File must be .html'); }
 				await fs.access(path);
-				path = await Template.Files.open(name, path);
-				load[name] && await load[name](path);
+				await Template.Files.open(path);
 			} catch (e) {
-				await Template.Files.close(name);
+				app.error(e);
+				await Template.Files.close(path);
 			}
 		};
-		await Promise.all((await fs.readdir(node)).map(async i => {
-			const name = i.substring(0, i.lastIndexOf('.'));
-			return await Template.Files.open(name, `${node}/${i}`);
-		}));
-		await Promise.all(Object.keys(load = {
-			header: async (get = {}) => get.body = Buffer.from((get.body || '').toString('utf8')
-				.replace(/<\/head>/, `<link rel="stylesheet" href="${asst}/style${app.get('environment') == 'production' ? '.min' : ''}.css">\n</head>`)
-			),
-			footer: async (get = {}) => get.body = Buffer.from((get.body || '').toString('utf8')
-				.replace(/<\/body>/, [ `${asst}/client${mini ? '.min' : ''}.js` ]
-						.concat(app.get('template.js').filter(i => Template.RegExp.remote.test(i)))
-						.concat(mini
-							? [ `${asst}/script.min.js` ]
-							: app.get('environment') == 'development'
-							? this.#js.tree.map(i => i.substring(app.root.length))
-							: this.#js.tree.map(i => `${asst}/js/${i}`))
-						.filter(Boolean)
-						.map(i => `<script src="${i}"></script>`)
-						.join('\n')
-					+ '\n</body>')
-			)
-		}).map(async i => await load[i](Template.Files.get(i))));
-		Template.Watch(node, { rename: chng, change: chng });
+		Template.On('open', `${root.path}/header.html`, data => {
+			const link = `<link rel="stylesheet" href="${asst}/style${prod ? '.min' : ''}.css">`;
+			return data.toString().replace(/<\/head>/, `\n${link}\n</head>`);
+		});
+		Template.On('open', `${root.path}/footer.html`, data => {
+			const scrp = [ `${asst}/client${prod ? '.min' : ''}.js` ]
+				.concat(app.get('template.js').filter(i => Template.RegExp.remote.test(i)))
+				.concat(prod ? [ `${asst}/script.min.js` ] : this.#js.tree.map(i => devl ? i.substring(app.root.length) : `${asst}/js/${i}`))
+				.filter(Boolean);
+			return data.toString().replace(/<\/body>/, scrp.map(i => `<script src="${i}"></script>`).join('\n') + '\n</body>');
+		});
+		Template.Watch(root.path, { rename: make, change: make });
+		for await (let i of root) { await make(`${root.path}/${i.name}`); }
 	};
 
 };
