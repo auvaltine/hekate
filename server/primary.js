@@ -140,10 +140,6 @@ export default class Primary {
 			});
 			work[i].on('message', i => {
 				switch (i.event) {
-					case 'template': {
-						console.log(i);
-						break;
-					}
 					case 'listen': {
 						app.set('cluster.length', app.get('cluster.length') + 1);
 						app.log(console.font('Worker listening', 32), console.font(`:${i.data}`, 33));
