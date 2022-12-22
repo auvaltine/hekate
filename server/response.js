@@ -1,5 +1,6 @@
 import fs					from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
+import http					from 'node:http';
 import zlib					from 'node:zlib';
 import Cookie				from 'hekate/cookie.js';
 import Template				from 'hekate/template.js';
@@ -122,26 +123,30 @@ export default Response = {
 		let file = typeof request.file !== 'object' ? {} : request.file;
 		let body = file.body || '';
 		try {
-			if (this.statusCode === 500) {
-				throw new Error;
-			}
-			if (body || file.path) {
-				body = body || await fs.readFile(file.path);
-				body = file.raw ? body : await Template.Build(this, body);
-			} else {
-				this.statusCode = 404;
-				body = (file = Template.Files.get(`${html}/404.html`))
-					 ? await Template.Build(this, file.body)
-					 : `<!DOCTYPE html><html><body><h1>404 Page Not Found</h1></body></html>`;
+			switch (this.statusCode) {
+				case 500: throw new Error;
+				case 200: if (body || file.path) {
+					body = body || await fs.readFile(file.path);
+					body = file.raw ? body : await Template.Build(this, body);
+					break;
+				}
+				default: {
+					this.statusCode === 200 && (this.statusCode = 404);
+					body = (file = Template.Files.get(`${html}/${this.statusCode}.html`))
+						 ? await Template.Build(this, file.body)
+						 : await Template.Build(this, `<h1>${this.statusCode} ${http.STATUS_CODES[this.statusCode]}</h1>`);
+					break;
+				}
 			}
 		} catch (e) {
 			this.statusCode = 500;
 			try {
 				this.view.error = e;
-				file = Template.Files.get(`${html}/500.html`);
-				body = await Template.Build(this, file.body);
+				body = (file = Template.Files.get(`${html}/500.html`))
+					 ? await Template.Build(this, file.body)
+					 : await Template.Build(this, `<h1>500 ${http.STATUS_CODES[500]}</h1>`);
 			} catch (i) {
-				body = `<!DOCTYPE html><html><body><h1>500 Internal Server Error</h1><pre>${e}</pre></body></html>`;
+				body = `<!DOCTYPE html><html><body><h1>500 ${http.STATUS_CODES[500]}</h1><pre>${e}</pre></body></html>`;
 			}
 		}
 		this.gzip() && (body = await new Promise(resolve => zlib.gzip(body, (e, body) => resolve(body))));
