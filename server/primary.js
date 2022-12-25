@@ -187,7 +187,7 @@ export default class Primary {
 			const date = new Date();
 			const time = app.get('log.cycle') * 8.64e+7;
 			for await (let i of await fs.opendir(app.logs)) {
-				(Primary.RegExp.logs.test(i.name)) &&
+				(Primary.RegExp.archive.test(i.name)) &&
 				(await fs.stat(`${app.logs}/${i.name}`)).mtime - date > time &&
 				(await fs.rm(`${app.logs}/${i.name}`));
 			}

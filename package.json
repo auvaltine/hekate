@@ -1,7 +1,7 @@
 {
 	"name": "hekate",
-	"version": "1.0.0-nightly+20221222",
-	"description": "JavaScript witchcraft: magically lightweight, nimble, comprehensive, full stack web framework.",
+	"version": "1.0.2",
+	"description": "JavaScript witchcraft: magically lightweight, nimble, comprehensive, full stack Node.js framework.",
 	"homepage": "https://hekate.app/@core",
 	"funding": "https://hekate.app/donate",
 	"repository": {
@@ -19,7 +19,7 @@
 		"url": "https://hekate.app"
 	},
 	"config": {
-		"allowed": [ "/(robots|sitemap).txt", "/content/modules/client/.*" ],
+		"allowed": [ "/(robots|sitemap)\\.txt", "/sitemap\\.xml", "/content/modules/client/.*" ],
 		"cluster": 0,
 		"environment": "development",
 		"http": { "port": 80 },
