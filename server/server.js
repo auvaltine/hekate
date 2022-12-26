@@ -13,7 +13,8 @@ import WebSocket from 'hekate/websocket.js';
 export default class Server {
 
 	/**
-	 * Creates a child server by loading routing methods and setting allowed/restricted files and
+	 * Creates a child server by loading routing methods and setting allowed/denied ip addresses,
+	 * files, and directories.
 	 * directories.
 	 *
 	 * @return {Server}
@@ -26,10 +27,10 @@ export default class Server {
 				await Promise.all((await fs.readdir(`${app.root}/content/routes`)).map(async i => {
 					i.substring(i.lastIndexOf('.')) === '.js' && await import(`${app.root}/content/routes/${i}`);
 				}));
-				app.set('allowed', app.get('template.directory'));
-				app.set.allowed.forEach((r, i) => app.set.allowed[i] = new RegExp('^' + r));
-				app.set.restricted.forEach((r, i) => app.set.restricted[i] = new RegExp('^' + r));
-				app.set.restricted.ip.forEach((r, i) => app.set.restricted.ip[i] = new Network(r));
+				app.set('allow', app.get('template.directory'));
+				app.set.allow.forEach((r, i) => app.set.allow[i] = new RegExp('^' + r));
+				app.set.deny.forEach((r, i) => app.set.deny[i] = new RegExp('^' + r));
+				app.set.deny.ip.forEach((r, i) => app.set.deny.ip[i] = new Network(r));
 				await new Template();
 				this.listen();
 			} catch (e) {

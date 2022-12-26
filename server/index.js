@@ -33,8 +33,8 @@ export default global.app = new class Hekate {
 		this.page = this.root + '/content/pages';
 		this.temp = tmpdir();
 		this.package = JSON.parse(readFileSync(`${this.core}/package.json`, 'utf8'));
-		this.package.config.restricted.ip = [];
-		this.package.config.restricted.ua = [];
+		this.package.config.deny.ip = [];
+		this.package.config.deny.ua = [];
 		Object.keys(this.package.config).map(i => this.set(i, this.package.config[i]));
 		Object.defineProperty(this.module, 'get', { value: function get (i, file) {
 			return module[i] ? module[i]

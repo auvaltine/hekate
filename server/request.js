@@ -71,14 +71,14 @@ export default Request = {
 		async (request, response) => {
 			const ip = request.ip.replace(Request.RegExp.IP, '');
 			const ua = request.headers['user-agent'];
-			for (const i of [ ...app.get('restricted.ip'), ...app.get('restricted.ua') ]) {
+			for (const i of [ ...app.get('deny.ip'), ...app.get('deny.ua') ]) {
 				if (i instanceof Network ? i.includes(ip)
 				  : i instanceof RegExp ? i.test(ua)
 				  : i === ua
 				) {
 					response.statusCode = 403;
 					response.destroy();
-					app.get('log.restricted') == false && (request.log = false);
+					app.get('log.denied') == false && (request.log = false);
 					return false;
 				}
 			}
@@ -93,8 +93,8 @@ export default Request = {
 		 */
 		async (request) => {
 			const path = request.url.pathname;
-			const good = app.get('allowed');
-			const evil = app.get('restricted').find(i => i.test(path));
+			const good = app.get('allow');
+			const evil = app.get('deny').find(i => i.test(path));
 			let i = path.lastIndexOf('.html');
 				i = ~i ? path.substring(0, i) : path;
 			if ((evil && good.find(i => i.test(path))) || !evil) {

@@ -2,7 +2,7 @@ Hekate.socket = (() => {
 	class Socket {
 		events = [];
 		instance = 0;
-		constructor (url, opts = {}) {
+		constructor (url) {
 			url = typeof url === 'string' && url ? url : '/';
 			url = new URL((url[0] === '/' ? `http${location.protocol === 'https:' ? 's' : ''}://${location.host}` : '') + url);
 			this.socket = new WebSocket(`ws${url.protocol === 'https:' ? 's' : ''}://${url.host}${url.pathname}`);
