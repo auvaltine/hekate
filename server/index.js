@@ -148,6 +148,31 @@ export default global.app = new class Hekate {
 	};
 
 	/**
+	 * Adds meta data for use in page headers.
+	 *
+	 * @param {String} type: The type of meta tag to use.
+	 * @param {String} content: The meta data content.
+	 * @return {*} If <content> is undefined, returns the content assigned to the type.
+	 */
+	meta (type, content) {
+		if (content !== undefined) {
+			if (type === 'title') {
+				app.meta.title || (app.meta.title = []);
+				app.meta.title.push(content);
+			} else {
+				app.meta[type] = content;
+			}
+		} else if ((content = app.meta[type] || '')) {
+			switch (type) {
+				case 'description': return `<meta name="${type}" content="${content}">`;
+				case 'title': return content;
+				default: return '';
+			}
+		}
+		return '';
+	};
+
+	/**
 	 * Prepare a module for loading.
 	 *
 	 * @param {Array|Function|String} name: A string will be split by commas and the resulting array
