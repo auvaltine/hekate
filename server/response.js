@@ -151,7 +151,7 @@ export default Response = {
 		}
 		this.gzip() && (body = await new Promise(resolve => zlib.gzip(body, (e, body) => resolve(body))));
 		this.setHeader('Content-Length', this.length = body.length);
-		this.end(body);
+		request.method !== 'HEAD' && this.end(body);
 	}
 
 };

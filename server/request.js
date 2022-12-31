@@ -183,7 +183,7 @@ export default Request = {
 				}
 			} else {
 				response.setHeader('Content-Type', request.file.type + Mime.Charset(request.file.type));
-				request.method !== 'HEAD' && await response[Response[request.file.method] ? request.file.method : 'dynamic']();
+				await response[Response[request.file.method] ? request.file.method : 'dynamic']();
 			}
 		}
 	],

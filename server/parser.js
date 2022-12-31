@@ -33,7 +33,7 @@ export default class Parser {
 	 */
 	constructor (request) {
 		const maxSize = app.get('upload.max');
-		this.content = request.headers['content-type'].match(Parser.RegExp.form) || [,,'urlencoded',''];
+		this.content = request.headers['content-type']?.match(Parser.RegExp.form) || [,,'urlencoded',''];
 		this.content = { type: this.content[1] || this.content[2], boundary: this.content[3] && ('--' + this.content[3]) };
 		return new Promise(async (resolve, reject) => {
 			const size = +request.headers['content-length'];
