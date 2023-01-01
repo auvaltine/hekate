@@ -144,7 +144,7 @@ export default Request = {
 		 * @return {*} Returns the value of the last triggered listener.
 		 */
 		async (request, response, emit) => {
-			app.get('title') && (app.meta.title = [ app.get('title').valueOf() ]);
+			app.get('title.default') && (app.meta.title = [ app.get('title.default').valueOf() ]);
 			for (const fn of [ ...Object.keys(module), ...(app.on[`http.${request.method.toLowerCase().toCamelCase()}`] || []) ]) {
 				if (fn.match instanceof RegExp) /* HTTP verbs */ {
 					emit = (emit = request.url.pathname.match(fn.match))

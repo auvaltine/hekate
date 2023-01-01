@@ -1,6 +1,6 @@
 {
 	"name": "hekate",
-	"version": "1.0.2-nightly+20221231",
+	"version": "1.0.3",
 	"description": "JavaScript witchcraft: magically lightweight, nimble, comprehensive, full stack Node.js framework.",
 	"homepage": "https://hekate.app/@core",
 	"funding": "https://hekate.app/donate",
@@ -34,6 +34,7 @@
 		"deny": [ ".*/[^/]+\\.[a-z]+$" ],
 		"session": { "expires": 15 },
 		"template": { "directory": "/assets", "client": true, "js": [], "css": [] },
+		"title": { "separator": "-" },
 		"upload": { "max": 4e+6, "file": 2e+6 },
 		"view": {}
 	},

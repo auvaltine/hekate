@@ -17,6 +17,7 @@ export default global.app = new class Hekate {
 	static RegExp = {
 		error: /^([^\n]+)\n\s*at [\s\S]*?\((?:file:\/\/)?(.+?):(\d+):(\d+)\)/,
 		esc: /\x1B\[\d+m/g,
+		meta: /^(?:author|description|generator|keywords|referrer|theme-color|color-scheme|viewport|creator|googlebot|publisher|robots)$/,
 		ws: /\s*,\s*/
 	};
 
@@ -150,24 +151,33 @@ export default global.app = new class Hekate {
 	/**
 	 * Adds meta data for use in page headers.
 	 *
-	 * @param {String} type: The type of meta tag to use.
+	 * @param {String} name: The name of the meta tag to use.
 	 * @param {String} content: The meta data content.
-	 * @return {*} If <content> is undefined, returns the content assigned to the type.
+	 * @return {*} If <content> is undefined, returns the content assigned to the name.
 	 */
-	meta (type, content) {
-		if (content !== undefined) {
-			if (type === 'title') {
+	meta (name, content) {
+		if (content === undefined) {
+			if (name === undefined) {
+				content = [];
+				for (const i in app.meta) {
+					app.meta.hasOwnProperty(i) && content.push(i === 'title'
+						? `<title>${app.meta.title.reverse().join(` ${app.get('title.separator')} `)}</title>`
+						: app.meta(i)
+					);
+				}
+				return content.join('\n');
+			} else if ((content = app.meta[name] || '')) {
+				return Hekate.RegExp.meta.test(name) ? `<meta name="${name}" content="${content}">`
+					 : name === 'title' ? content
+					 : '';
+			}
+		} else switch (name) {
+			case 'title': {
 				app.meta.title || (app.meta.title = []);
 				app.meta.title.push(content);
-			} else {
-				app.meta[type] = content;
+				break;
 			}
-		} else if ((content = app.meta[type] || '')) {
-			switch (type) {
-				case 'description': return `<meta name="${type}" content="${content}">`;
-				case 'title': return content;
-				default: return '';
-			}
+			default: app.meta[name] = content; break;
 		}
 		return '';
 	};
