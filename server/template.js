@@ -97,22 +97,19 @@ export default class Template {
 	 * @return {undefined}
 	 */
 	static async Watch (dir, fn) {
-		let i;
-		if ((await fs.stat(dir)).isDirectory()) {
-			for await (const i of await fs.watch(dir)) {
-				if (fn[i.eventType]) try {
-					await fs.access(`${dir}/${i.filename}`);
-					await fn[i.eventType](`${dir}/${i.filename}`);
-				} catch (e) {}
+		let i, isDir;
+		if ((isDir = (await fs.stat(dir)).isDirectory())) {
+			for await (const i of await fs.opendir(dir)) {
+				i.isDirectory() && Template.Watch(`${dir}/${i.name}`, fn);
 			}
-		} else {
-			for await (const i of await fs.watch(dir)) {
-				if (fn[i.eventType]) try {
-					await fs.access(dir);
-					await fn[i.eventType](dir);
-					await Template.Watch(dir, fn);
-				} catch (e) {}
-			}
+		}
+		for await (const i of await fs.watch(dir)) {
+			const file = dir + (isDir ? '/' + i.filename : '');
+			if (fn[i.eventType]) try {
+				await fs.access(file);
+				await fn[i.eventType](file);
+				Template.Watch(file, fn);
+			} catch (e) {}
 		}
 	};
 
