@@ -11,7 +11,6 @@ import 'hekate/primitive/number.js';
 import 'hekate/primitive/object.js';
 import 'hekate/primitive/string.js';
 
-global.module = {};
 export default global.app = new class Hekate {
 
 	static RegExp = {
@@ -37,28 +36,53 @@ export default global.app = new class Hekate {
 		this.package.config.deny.ip = [];
 		this.package.config.deny.ua = [];
 		Object.keys(this.package.config).map(i => this.set(i, this.package.config[i]));
-		Object.defineProperty(this.module, 'get', { value: function get (i, file) {
-			return module[i] ? module[i]
-				 : existsSync(file = `${app.root}/content/modules/server/${i}/${i}.js`) ? (module[i] = file)
+
+		/**
+		 * Sets a module function or file in preparation for loading.
+		 *
+		 * @param {Function|String} i: The name or value of the module.
+		 * @return {Function|String} Returns the module function or file location.
+		 */
+		Object.defineProperty(this.module, 'get', { value: function get (i) {
+			let file;
+			return typeof i === 'function' ? (app.module[i] = i)
+				 : app.module[i] ? app.module[i]
+				 : existsSync(file = `${app.root}/content/modules/server/${i}/${i}.js`) ?  (app.module[i] = file)
 				 : undefined;
 		}});
+
+		/**
+		 * Triggers a module or its default method into memory as a stored value of the <app.module>
+		 * object. If the module triggers an error, it's deleted and unavailable for use.
+		 *
+		 * @param {String} i: The name of the module.
+		 * @param {Boolean} Returns true or false if an error triggers.
+		 */
 		Object.defineProperty(this.module, 'load', { value: async function load (i) {
 			try {
-				module[i] || this.get(i);
-				typeof module[i] === 'string' && (module[i] = await import(module[i]));
-				if (module[i].default) {
-					if (await module[i].default()) {
-						return true;
-					}
-				} else {
+				let load;
+				app.module[i] || app.module.get(i);
+				typeof app.module[i] === 'string' && (app.module[i] = await import(app.module[i]));
+				if ((load = typeof app.module[i] === 'function' ? app.module[i] : app.module[i].default || null)) {
+					await load();
 					return true;
-				}
+				} else throw Error;
 			} catch (e) {
-				delete module[i];
+				delete app.module[i];
 				app.error(e);
-				app.error(console.font(`ReferenceError: module.${i} not loaded`, 31));
+				app.error(new ReferenceError(`module.${i} not loaded`));
+				return false;
 			}
 		}});
+
+		/**
+		 * Logs a message to a custom log file in logs/<file>.log with a leading RFC 3339 timestamp.
+		 *
+		 * @param {String} file: The name of the log file.
+		 * @param {String|Number} ...i: A list of messages to print. If the last argument is
+		 * 		Boolean:false, a timestamp will not be logged.
+		 * @return {undefined}
+		 */
 		Object.defineProperty(this.log, 'to', { value: async function to (file, ...i) {
 			try { await fs.access(`${app.logs}/${file}.log`); }
 			catch (e) {
@@ -191,10 +215,13 @@ export default global.app = new class Hekate {
 	 * @return {undefined}
 	 */
 	module (name) {
-		if (typeof name === 'function') {
-			module[name] = name;
+		name = name instanceof Array ? name
+			 : typeof name === 'string' ? name.split(Hekate.RegExp.ws)
+			 : typeof name === 'function' ? [ name ]
+			 : [];
+		if (name.includes('get') || name.includes('load')) {
+			app.error(new ReferenceError('Modules cannot be named "get" or "load"'));
 		} else {
-			name = name instanceof Array ? name : typeof name === 'string' ? name.split(Hekate.RegExp.ws) : [];
 			name.map(this.module.get);
 		}
 	};

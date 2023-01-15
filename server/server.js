@@ -12,6 +12,10 @@ import WebSocket from 'hekate/websocket.js';
 
 export default class Server {
 
+	static RegExp = {
+		module: /^(?:get|load)$/
+	};
+
 	/**
 	 * Creates a child server by loading routing methods and setting allowed/denied ip addresses,
 	 * files, and directories.
@@ -22,7 +26,7 @@ export default class Server {
 	constructor () {
 		(async file => {
 			await Primary.methods();
-			await Promise.all(Object.keys(module).map(async i => await app.module.load(i)));
+			await Promise.all(Object.keys(app.module).filter(i => !Server.RegExp.module.test(i)).map(async i => await app.module.load(i)));
 			try {
 				await Promise.all((await fs.readdir(`${app.root}/content/routes`)).map(async i => {
 					i.substring(i.lastIndexOf('.')) === '.js' && await import(`${app.root}/content/routes/${i}`);

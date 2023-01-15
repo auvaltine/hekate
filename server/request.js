@@ -145,15 +145,13 @@ export default Request = {
 		 */
 		async (request, response, emit) => {
 			app.get('title.default') && (app.meta.title = [ app.get('title.default').valueOf() ]);
-			for (const fn of [ ...Object.keys(module), ...(app.on[`http.${request.method.toLowerCase().toCamelCase()}`] || []) ]) {
+			for (const fn of [ ...Object.keys(app.module), ...(app.on[`http.${request.method.toLowerCase().toCamelCase()}`] || []) ]) {
 				if (fn.match instanceof RegExp) /* HTTP verbs */ {
 					emit = (emit = request.url.pathname.match(fn.match))
 						 ? (request.url.params = emit.slice(1)) && await fn(request, response)
 						 : undefined;
-				} else if ((emit = module[fn])) /* Modules */ {
-					emit = typeof emit === 'function' ? await emit(request, response)
-						 : typeof emit.request === 'function' ? await emit.request(request, response)
-						 : undefined;
+				} else if ((emit = app.module[fn]) && typeof emit.request === 'function') /* Modules */ {
+					emit = await emit.request(request, response);
 				} else {
 					emit = undefined;
 				}
