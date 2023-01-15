@@ -16,7 +16,7 @@ export default global.app = new class Hekate {
 	static RegExp = {
 		error: /^([^\n]+)\n\s*at [\s\S]*?\((?:file:\/\/)?(.+?):(\d+):(\d+)\)/,
 		esc: /\x1B\[\d+m/g,
-		meta: /^(?:author|description|generator|keywords|referrer|theme-color|color-scheme|viewport|creator|googlebot|publisher|robots)$/,
+		meta: /^(?:author|description|generator|keywords|referrer|theme-color|color-scheme|viewport|creator|googlebot|publisher|robots|viewport)$/,
 		ws: /\s*,\s*/
 	};
 

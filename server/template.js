@@ -65,7 +65,7 @@ export default class Template {
 				buff = await response.template(i, buff.args);
 				html.push(buff?.body || '');
 			}
-			body = html[1] + html[0] + html[2];
+			body = (html[1] + html[0] + html[2]).replace('<head>', app.meta());
 		} catch (e) {
 			app.error(e);
 		}
