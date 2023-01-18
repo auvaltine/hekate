@@ -73,6 +73,39 @@ export default class Template {
 	};
 
 	/**
+	 * Watches a directory for changes on <type> files.
+	 *
+	 * @param {Array|String} node: The original root directories.
+	 * @param {Array|String} type: An extension or list of extensions to watch for changes.
+	 * @param {Function} fn: A function to call on a file when it's changed, added, or removed.
+	 * @return {Array} Returns a list of directories and files.
+	 */
+	static async List (node, type, fn) {
+		const dirs = [];
+		type instanceof Array || (type = [ type ]);
+		for (let i of node instanceof Array ? node : [ node ]) {
+			if (i[0] === '/') try {
+				await fs.access(i);
+				const stat = await fs.stat(i);
+				if (stat.isDirectory()) {
+					dirs.push(i);
+					for await (const file of await fs.opendir(i)) {
+						file.isDirectory() && dirs.push(...(await Template.List(
+							`${i}/${file.name}`,
+							type
+						)));
+					}
+				} else if (type.includes(i.substring(i.lastIndexOf('.') + 1))) {
+					dirs.push(i);
+				}
+			} catch (e) {}
+		}
+		return fn
+			? dirs.map(i => Template.Watch(i, { rename: fn, change: fn }))
+			: dirs;
+	};
+
+	/**
 	 * Assigns an event listener to a file location.
 	 *
 	 * @param {String} event: The name of the event (e.g., open).
@@ -108,7 +141,7 @@ export default class Template {
 			if (fn[i.eventType]) try {
 				await fs.access(file);
 				await fn[i.eventType](file);
-				Template.Watch(file, fn);
+				isDir || Template.Watch(file, fn);
 			} catch (e) {}
 		}
 	};
@@ -234,6 +267,7 @@ export default class Template {
 		const root = `${app.root}${app.get('template.directory')}`;
 		const full = `${root}/style.css`;
 		const thin = `${root}/style.min.css`;
+		const dirs = [ `${app.root}${app.get('template.directory')}/scss` ].concat(app.get('template.css').filter(i => i[0] === '/'));
 		const make = async () => {
 			try {
 				const scss = (await fs.readFile(`${root}/scss/index.scss`)) + (await Promise.all(app.get('template.css')
@@ -256,23 +290,7 @@ export default class Template {
 				}
 			} catch (e) { app.error(e); }
 		};
-		(await (async function scan (node) /* Get a list of directories to watch for changes */ {
-			const dirs = [];
-			for (let i of node instanceof Array ? node : [ node ]) {
-				if (i[0] === '/') try {
-					await fs.access(i = `${app.root}${i}`);
-					const path = await fs.stat(i);
-					dirs.push(i);
-					if (path.isDirectory()) {
-						for await (const file of await fs.opendir(i)) {
-							file.isDirectory() && dirs.push(...(await scan(`${i}/${file.name}`)));
-						}
-					}
-				} catch (e) {}
-			}
-			return dirs;
-		})([ `${app.get('template.directory')}/scss` ].concat(app.get('template.css').filter(i => i[0] === '/'))))
-			.map(i => Template.Watch(i, { rename: make, change: make }));
+		await Template.List(dirs, [ 'css', 'scss' ], make);
 		await make();
 		await Template.Files.open(app.get('environment') == 'production' ? thin : full);
 	};
@@ -323,8 +341,7 @@ export default class Template {
 		const devl = app.get('environment') == 'development';
 		const root = await fs.opendir(`${app.root}${asst}/html`);
 		const make = async path => {
-			try {
-				if (!Template.RegExp.html.test(path)) { throw new TypeError('File must be .html'); }
+			if (path.substring(path.lastIndexOf('.') + 1) === 'html') try {
 				await fs.access(path);
 				await Template.Files.open(path);
 			} catch (e) {
@@ -343,7 +360,7 @@ export default class Template {
 				.filter(Boolean);
 			return data.toString().replace(/<\/body>/, scrp.map(i => `<script src="${i}"></script>`).join('\n') + '\n</body>');
 		});
-		Template.Watch(root.path, { rename: make, change: make });
+		await Template.List(root.path, 'html', make);
 		for await (let i of root) { await make(`${root.path}/${i.name}`); }
 	};
 
