@@ -14,11 +14,15 @@ Hekate.css = Object.assign(function (find, ctxt) {
 		})();
 	return { selector: selc, elems: find };
 }, {
-	// Define custom pseudo selectors via
-	//	Hekate.css.pseudo[selector-name] = function ([string]) {}
-	//	Hekate.css.pseudo.selectorName = function ([string]) {}
-	//
-	// :selector-name([string]) [thisArg = matched element]
+
+	/**
+	 * Define custom pseudo-selectors via:
+	 *
+	 * 	- Hekate.css.pseudo[selector-name] = function ([string]) {}
+	 * 	- Hekate.css.pseudo.selectorName = function ([string]) {}
+	 *
+	 * :selector-name([string]) [thisArg = matched element]
+	 */
 	pseudo: {
 		button () { return this.nodeName.toLowerCase() === 'button' || this.type === 'button'; },
 		checked () { return this.checked; },
@@ -33,6 +37,7 @@ Hekate.css = Object.assign(function (find, ctxt) {
 		radio () { return this.type === 'radio'; },
 		visible () { return !!(this.clientHeight && this.clientWidth); }
 	},
+
 	rules: /* RegExp rules */ {
 		attr: /^\[\s*([^ "'|~!$^*>\/='"]+)(?:([~!$^*|])?=\s*(?:'([^']*)'|"([^"]*)"|([^\s\]]+)))?(?:\s+([is]))?\s*\]$/i,
 		block: /(?:\((?:[^)]*"[^"]*"|[^)]*'[^']*'|[^)]*)\s*\)|\[(?:(?:[^=\]]+(?:[~!$^*|])?=\s*)?(?:"[^"]*"|'[^']*'|[^\]]*))(?:\s+[ic])?\s*\])/g,
@@ -52,22 +57,53 @@ Hekate.css = Object.assign(function (find, ctxt) {
 		})(),
 		ws: /\s+/g
 	},
-	context (selector, context) /* Retrieves a basic group elements within the document defined by [selector] */ {
+
+	/**
+	 * Retrieves a basic group of elements within the document.
+	 *
+	 * @param {String} selector: The CSS string to select elements.
+	 * @param {HTMLElement} context: A group of existing elements to search for the selector.
+	 * @return {Array} Returns an array of matching selected elements.
+	 */
+	context (selector, context) {
 		let i;
 		selector || (selector = {});
 		context instanceof Array || (context = [ context ]);
 		return [].concat(...context.filter(elem => elem.nodeType === 1 || elem.nodeType === 9).map(elem =>
 			  selector['#'] ? [ elem.getElementById(selector['#']) ]
 			: selector['.'] ? Array.from(elem.getElementsByClassName(selector['.'][0]))
-			//: selector.node ? Array.from(elem.getElementsByTagName(selector.node))
 			: selector.node ? selector.node.split('|').map(i => Array.from(elem.getElementsByTagName(i))).flat()
 			: Array.from(elem.getElementsByTagName('*'))
 		));
 	},
-	filter (selector, context) /* Filters matching [selector] elements from the [context] group */ {
+
+	/**
+	 * Filters matching elements from the <context> group.
+	 *
+	 * @param {String} selector: The CSS string to select elements.
+	 * @param {HTMLElement} context: A group of existing elements to search for the selector.
+	 * @return {Array} Returns an array of matching selected elements.
+	 */
+	filter (selector, context) {
 		return context.map(Hekate.css.match, selector).flat().filter(Boolean);
 	},
-	match (elem, i) /* Matches [elem] to [thisArg#selector] */ {
+
+	/**
+	 * Matches an element using <thisArg> properties.
+	 *
+	 * <thisArg> contains:
+	 * 	- node: The HTMLElement
+	 * 	- "#": An ID string
+	 * 	- ".": A list of class names
+	 * 	- "[": A list of attributes
+	 * 	- ":": A list of pseudo-selectors
+	 * 	- combinator: One of " ", "~", "+", ">" to continue matching
+	 *
+	 * @param {HTMLElement} elem: An HTML element to test for a match.
+	 * @return {HTMLElement|null} Returns the same element if matched, or null.
+	 */
+	match (elem) {
+		let i;
 		return this.nodeType ? (this === elem ? elem : null) : (
 				(elem && elem.nodeType === 1)
 			&& (!(i = this.node) || i === '*' || i.split('|').includes(elem.tagName.toLowerCase()))
@@ -94,7 +130,14 @@ Hekate.css = Object.assign(function (find, ctxt) {
 			})()))
 		) ? elem : null;
 	},
-	token (find) /* Splits a selector string to [find] by its tokens */ {
+
+	/**
+	 * Tokenizes a selector to describe its properties.
+	 *
+	 * @param {String} find: The selector to tokenize.
+	 * @return {Object} Returns an object with <selector> and <query> keys.
+	 */
+	token (find) {
 		const rules = Hekate.css.rules;
 		return {
 			selector: rules.token((find = Array.from(new Set(find.replace(rules.block, a => {
