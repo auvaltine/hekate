@@ -132,9 +132,9 @@ export default Response = {
 				}
 				default: {
 					this.statusCode === 200 && (this.statusCode = 404);
-					body = (file = Template.Files.get(`${html}/${this.statusCode}.html`))
-						 ? await Template.Build(this, file.body)
-						 : await Template.Build(this, `<h1>${this.statusCode} ${http.STATUS_CODES[this.statusCode]}</h1>`);
+					body = await Template.Build(this, (file = Template.Files.get(`${html}/${this.statusCode}.html`))
+						 ? file.body
+						 : `<h1>${this.statusCode} ${http.STATUS_CODES[this.statusCode]}</h1>`);
 					break;
 				}
 			}
@@ -142,9 +142,9 @@ export default Response = {
 			this.statusCode = 500;
 			try {
 				this.view.error = e;
-				body = (file = Template.Files.get(`${html}/500.html`))
-					 ? await Template.Build(this, file.body)
-					 : await Template.Build(this, `<h1>500 ${http.STATUS_CODES[500]}</h1>`);
+				body = await Template.Build(this, (file = Template.Files.get(`${html}/500.html`))
+					 ? file.body
+					 : `<h1>500 ${http.STATUS_CODES[500]}</h1>`);
 			} catch (i) {
 				body = `<!DOCTYPE html><html><body><h1>500 ${http.STATUS_CODES[500]}</h1><pre>${e}</pre></body></html>`;
 			}

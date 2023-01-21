@@ -3,10 +3,9 @@ import { transformSync as minify } from '@babel/core';
 import sass						   from 'sass';
 
 export default class Template {
-	
+
 	static RegExp = {
 		clientPrototype: /^(Hekate\.[\w]+ = )?Hekate\.prototype\.(\w+) = function/,
-		html: /(?:^|\/)[^\.][^\/]*\.html$/i,
 		remote: /^https?:\/\//,
 		mini: /\.min\.js$/
 	};

@@ -55,7 +55,11 @@ export default class Server {
 				if ('cert|key|port'.split('|').every(i => i in config.https)) try {
 					const crt = config.https.cert.valueOf();
 					const key = config.https.key.valueOf();
-					let tic = [ crt, key ].map(i => watch(i, () => clearTimeout(tic) || (tic = setTimeout(process.disconnect.bind(process), 5000))));
+					  // When an SSL file changes, stop the server after 5 seconds to trigger a
+					  // reload of the new certificate and key.
+					  let tic = [ crt, key ].map(i => watch(i, () => clearTimeout(tic) ||
+					     (tic = setTimeout(process.disconnect.bind(process), 5000)))
+					   );
 					return http2.createSecureServer({ allowHTTP1: true, cert: await fs.readFile(crt), key: await fs.readFile(key) });
 				} catch (e) {}
 				delete app.set.https;
