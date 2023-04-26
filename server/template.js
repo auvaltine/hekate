@@ -6,6 +6,7 @@ export default class Template {
 
 	static RegExp = {
 		clientPrototype: /^(Hekate\.[\w]+ = )?Hekate\.prototype\.(\w+) = function/,
+		client: /^@client\/[a-z\.]+$/,
 		remote: /^https?:\/\//,
 		mini: /\.min\.js$/
 	};
@@ -266,18 +267,21 @@ export default class Template {
 		const root = `${app.root}${app.get('template.directory')}`;
 		const full = `${root}/style.css`;
 		const thin = `${root}/style.min.css`;
-		const dirs = [ `${app.root}${app.get('template.directory')}/scss` ].concat(app.get('template.css').filter(i => i[0] === '/'));
+		const temp = (await Promise.all([]
+			.concat(app.get('template.css').filter(i => i[0] === '/'))
+			.concat(app.get('template.js').filter(i => Template.RegExp.client.test(i)).map(i => `/content/modules/${i.substring(1)}/scss`))
+			.map(async i => {
+				try {
+					await fs.access(`${app.root}${i}`);
+					return `${app.root}${i}`;
+				}
+				catch (e) {}
+			})))
+			.filter(Boolean);
+		const dirs = [ `${app.root}${app.get('template.directory')}/scss` ].concat(temp);
 		const make = async () => {
 			try {
-				const scss = (await fs.readFile(`${root}/scss/index.scss`)) + (await Promise.all(app.get('template.css')
-					.filter(i => i[0] === '/')
-					.map(async i => {
-						try {
-							await fs.access(`${app.root}${i}`);
-							return `@import '${app.root}${i}';`;
-						} catch (e) {}
-					})))
-					.join('\n');
+				const scss = (await fs.readFile(`${root}/scss/index.scss`)) + temp.map(i => `@import '${i}'`).join('\n');
 				for (const i of [ 'compressed', 'expanded' ]) {
 					await new Promise(resolve => sass.render({
 						data: scss,
