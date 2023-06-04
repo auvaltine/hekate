@@ -1,4 +1,28 @@
 Object.defineProperties(String.prototype, {
+	base32: { value: (() => {
+		const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'.split('');
+		return function base32 (direction = 'encode', strpad = false) {
+			let output = this;
+			switch (direction) {
+				case 'decode': {
+					output = output.replace(/=+$/, '').split('');
+					output = output.map(i => alphabet.indexOf(i).toString(2).padStart(5, '0')).join('');
+					output = output.substring(0, output.length - output.length % 8);
+					output = output.match(/.{8}/g);
+					return output.map(i => String.fromCharCode(parseInt(i, 2))).join('');
+				}
+				case 'encode':
+				default: {
+					output = output.split('');
+					output = output.map(i => i.charCodeAt().toString(2).padStart(8, '0')).join('');
+					output = output.match(/.{1,5}/g);
+					output = output.map(i => alphabet[parseInt(i.padEnd(5, '0'), 2)]).join('');
+					strpad && (output += '='.repeat(output.length % 8));
+					return output;
+				}
+			}
+		};
+	})()},
 	toCamelCase: { value: function toCamelCase () {
 		return this.replace(/\s+/g, '-').replace(/^[a-z]/i, a => a.toLowerCase()).replace(/-[a-z]/ig, a => a[1].toUpperCase());
 	}},
