@@ -207,7 +207,10 @@ export default Request = {
 			delete request.session.post;
 		}
 		response.writableEnded || response.end();
-		app.get('log.http') != false && request.log !== false && Request.Log(request, response);
+		app.get('log') != false
+			&& app.get('log.http') != false
+			&& request.log !== false
+			&& Request.Log(request, response);
 	},
 
 	/**

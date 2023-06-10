@@ -1,6 +1,6 @@
 {
 	"name": "hekate",
-	"version": "1.0.5-nightly+230603",
+	"version": "1.0.5-nightly+230610",
 	"description": "JavaScript witchcraft: magically lightweight, nimble, comprehensive, full stack Node.js framework.",
 	"homepage": "https://hekate.app/core",
 	"funding": "https://hekate.app/donate",
@@ -53,7 +53,6 @@
 	"dependencies": {
 		"@babel/core": "^7.19.0",
 		"babel-preset-minify": "^0.5.0",
-		"mongodb": "^4.9.0",
 		"sass": "^1.54.0"
 	}
 }
