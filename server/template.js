@@ -1,6 +1,6 @@
 import fs						   from 'node:fs/promises';
 import { transformSync as minify } from '@babel/core';
-import sass						   from 'sass';
+import * as sass				   from 'sass';
 
 export default class Template {
 
