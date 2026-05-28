@@ -127,8 +127,15 @@ export default class Primary {
 	 */
 	async cluster () {
 		const work = [];
-		  let core = +app.get('cluster');
-		app.set('cluster', !core || core > cpus().length || isNaN(core) ? cpus().length : core);
+		const max  = cpus().length;
+		  let core = app.get('cluster').valueOf();
+		if (core === 'auto') {
+			core = max;
+		} else {
+			core = parseInt(core, 10);
+			core = Number.isInteger(core) && core > 0 ? Math.min(core, max) : 1;
+		}
+		app.set('cluster', core);
 		app.set('cluster.length', 0);
 		core = app.get('cluster').valueOf();
 		function fork (i) {
