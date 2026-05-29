@@ -1,5 +1,5 @@
-import readline	from 'node:readline';
-import regexp	from '../constants/regexp.mjs';
+import readline from 'node:readline';
+import regexp from '../constants/regexp.mjs';
 
 /**
  * Prompts (Yes/No) user input.

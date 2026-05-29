@@ -1,6 +1,6 @@
 {
 	"name": "hekate",
-	"version": "1.0.6",
+	"version": "1.0.7",
 	"description": "JavaScript witchcraft: magically lightweight, nimble, comprehensive, full stack Node.js framework.",
 	"homepage": "https://hekate.app/core",
 	"funding": "https://hekate.app/donate",
@@ -19,28 +19,55 @@
 		"url": "https://hekate.app"
 	},
 	"config": {
-		"allow": [ "/(?:robots|sitemap)\\.txt$", "/sitemap\\.xml$", "/content/modules/client/.*" ],
-		"cluster": 1,
-		"environment": "development",
-		"http": { "port": 80 },
-		"https": { "port": 443 },
+		"allow": { "$value": [ "/(?:robots|sitemap)\\.txt$", "/sitemap\\.xml$", "/content/modules/client/.*" ] },
+		"cluster": { "$value": 1 },
+		"environment": { "$value": "development" },
+		"http": { "port": { "$value": 80 } },
+		"https": { "port": { "$value": 443 } },
 		"log": {
-			"cycle": 7,
-			"http": "%a \"%r\" %s %B %Fms \"%f\" \"%u\" %d",
-			"size": 10e+6,
-			"trim": 256,
-			"trimText": "%s more characters"
+			"cycle": { "$value": 7 },
+			"http": { "$value": "%a \"%r\" %s %B %Fms \"%f\" \"%u\" %d" },
+			"size": { "$value": 10e+6 },
+			"trim": { "$value": 256 },
+			"trimText": { "$value": "%s more characters" }
 		},
-		"deny": [ ".*/[^/]+\\.[a-z]+$" ],
-		"session": { "expires": 15 },
-		"template": { "directory": "/assets", "client": true, "js": [], "css": [] },
-		"title": { "separator": "-" },
-		"upload": { "max": 4e+6, "file": 2e+6 },
+		"deny": { "$value": [ ".*/[^/]+\\.[a-z]+$" ] },
+		"session": { "expires": { "$value": 15 } },
+		"template": {
+			"directory": { "$value": "/assets" },
+			"client": { "$value": true },
+			"js": { "$value": [] },
+			"css": { "$value": [] }
+		},
+		"title": { "separator": { "$value": "-" } },
+		"upload": { "max": { "$value": 4e+6 }, "file": { "$value": 2e+6 } },
 		"view": {}
 	},
 	"os": [ "!win32" ],
 	"engines": {
-		"node": ">=10.10.0"
+		"node": ">=18.0.0"
+	},
+	"exports": {
+		".": "./server/index.js",
+		"./console": "./server/console.js",
+		"./cookie": "./server/cookie.js",
+		"./index": "./server/index.js",
+		"./limiter": "./server/limiter.js",
+		"./mime": "./server/mime.js",
+		"./network": "./server/network.js",
+		"./parser": "./server/parser.js",
+		"./primary": "./server/primary.js",
+		"./primitive/array": "./server/primitive/array.js",
+		"./primitive/date": "./server/primitive/date.js",
+		"./primitive/number": "./server/primitive/number.js",
+		"./primitive/object": "./server/primitive/object.js",
+		"./primitive/string": "./server/primitive/string.js",
+		"./request": "./server/request.js",
+		"./response": "./server/response.js",
+		"./server": "./server/server.js",
+		"./session": "./server/session.js",
+		"./template": "./server/template.js",
+		"./websocket": "./server/websocket.js"
 	},
 	"scripts": {
 		"postinstall": "./index.mjs postinstall",

@@ -1,12 +1,12 @@
-import fs						  from 'node:fs/promises';
+import fs from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
-import Cookie					  from 'hekate/cookie.js';
-import Limiter					  from 'hekate/limiter.js';
-import Network					  from 'hekate/network.js';
-import Mime						  from 'hekate/mime.js';
-import Parser					  from 'hekate/parser.js';
-import Response					  from 'hekate/response.js';
-import Session					  from 'hekate/session.js';
+import Cookie from 'hekate/cookie';
+import Limiter from 'hekate/limiter';
+import Network from 'hekate/network';
+import Mime from 'hekate/mime';
+import Parser from 'hekate/parser';
+import Response from 'hekate/response';
+import Session from 'hekate/session';
 
 export default Request = {
 
@@ -50,7 +50,7 @@ export default Request = {
 		 * @return {undefined}
 		 */
 		async (request) => {
-			const http = 'http' + (app.get('https') ? 's' : '');
+			const http = 'http' + (app.get('https.cert') ? 's' : '');
 			const host = request.headers[request.httpVersion === '2.0' ? ':authority' : 'host'];
 			const orig = request.url;
 			request.url = new URL(`${http}://${host}${request.url}`);
@@ -71,7 +71,7 @@ export default Request = {
 		async (request, response) => {
 			const ip = request.ip.replace(Request.RegExp.IP, '');
 			const ua = request.headers['user-agent'];
-			for (const i of [ ...app.get('deny.ip'), ...app.get('deny.ua') ]) {
+			for (const i of [ ...(app.get('deny.ip') || []), ...(app.get('deny.ua') || []) ]) {
 				if (i instanceof Network ? i.includes(ip)
 				  : i instanceof RegExp ? i.test(ua)
 				  : i === ua
@@ -121,7 +121,7 @@ export default Request = {
 		 */
 		async (request, response) => {
 			const pass = app.get('limit') ? Limiter.Client(request.ip).limits(request.file.method || 'dynamic') : true;
-			app.get('https') && response.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+			app.get('https.cert') && response.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
 			if (typeof pass === 'object' ? Limiter.Headers(request, response, pass) : true) {
 				if (app.get('session') != false) {
 					request.session = Session.Find(request.headers.cookie || '', this);
@@ -144,7 +144,8 @@ export default Request = {
 		 * @return {*} Returns the value of the last triggered listener.
 		 */
 		async (request, response, emit) => {
-			app.get('title.default') && (app.meta.title = [ app.get('title.default').valueOf() ]);
+			const title = app.get('title.default');
+			title && (app.meta.title = [ title ]);
 			for (const fn of [ ...Object.keys(app.module), ...(app.on[`http.${request.method.toLowerCase().toCamelCase()}`] || []) ]) {
 				if (fn.match instanceof RegExp) /* HTTP verbs */ {
 					emit = (emit = request.url.pathname.match(fn.match))

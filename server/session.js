@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import Cookie					  from 'hekate/cookie.js';
+import Cookie from 'hekate/cookie';
 
 export default class Session {
 
@@ -36,7 +36,7 @@ export default class Session {
 		Session.Clients.push(this);
 		this._id = new Cookie('session');
 		this._id.set('httponly', true);
-		this._id.set('secure', !!app.get('https'));
+		this._id.set('secure', !!app.get('https.cert'));
 		this._id.set('samesite', 'strict');
 		this._id.set(_id || randomUUID());
 		if (request) {

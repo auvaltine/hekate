@@ -40,7 +40,7 @@ export default async function build () {
 				[ 'content/routes/' ],
 				[ 'logs/' ],
 				[ 'config.js', [
-					`app.set('domain', '${host[0]}');`,
+					`app.set('domain', '${host.name}');`,
 					`app.set('environment', 'development');`,
 					`app.set('http.port', ${host[1]});`
 				].join('\n') ],

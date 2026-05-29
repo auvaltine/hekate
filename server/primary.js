@@ -1,13 +1,14 @@
-import cluster				   from 'node:cluster';
-import crypto				   from 'node:crypto';
-import fs					   from 'node:fs/promises';
-import http					   from 'node:http';
-import net					   from 'node:net';
-import stream				   from 'node:stream';
+import cluster from 'node:cluster';
+import crypto from 'node:crypto';
+import fs from 'node:fs/promises';
+import http from 'node:http';
+import net from 'node:net';
+import stream from 'node:stream';
+import tls from 'node:tls';
 import { readFileSync, watch } from 'node:fs';
-import { cpus }				   from 'node:os';
-import Mime					   from 'hekate/mime.js';
-import Template				   from 'hekate/template.js';
+import { cpus } from 'node:os';
+import Mime from 'hekate/mime';
+import Template from 'hekate/template';
 
 export default class Primary {
 
@@ -15,6 +16,22 @@ export default class Primary {
 		archive: /-[0-9]{13,}\.log$/,
 		dots: /\./g,
 		nums: /\D/g
+	};
+
+	/**
+	 * Checks current SSL certificate and key are valid by creating a secure context.
+	 *
+	 * @return {Object|undefined} Returns an object containing the certificate and key contents,
+	 *                            port, and the path to the certificate and key.
+	 */
+	static async secure () {
+		const config = app.get('https', true);
+		if (config && 'cert|key|port'.split('|').every(i => i in config)) {
+			const cert = { file: await fs.readFile(config.cert.$value), path: config.cert.$value };
+			const key  = { file: await fs.readFile(config.key.$value), path: config.key.$value };
+			tls.createSecureContext({ cert: cert.file, key: key.file });
+			return { cert, key, port: config.port.$value };
+		}
 	};
 
 	/**
@@ -34,8 +51,8 @@ export default class Primary {
 		 * @return {Boolean|undefined}
 		 */
 		Object.defineProperty(app, i, /* Define HTTP routing verbs */ {
-			value: (...args) => i === 'get' && !args[1]
-				? app.set.walk(args[0])
+			value: (...args) => i === 'get' && (args.length === 1 || typeof args[1] === 'boolean')
+				? (args[0] = app.set.walk(args[0])) && (args[1] ? args[0] : args[0].$value)
 				: (args[1].match = typeof args[0] === 'string'
 					? new RegExp('^' + args[0].replace(Primary.RegExp.dots, '\\.') + (i === 'socket' ? '(?:\\..+|$)' : '$'))
 					: args[0]) && app.on(`http.${i}`, args[1])
@@ -128,7 +145,7 @@ export default class Primary {
 	async cluster () {
 		const work = [];
 		const max  = cpus().length;
-		  let core = app.get('cluster').valueOf();
+		  let core = app.get('cluster');
 		if (core === 'auto') {
 			core = max;
 		} else {
@@ -137,7 +154,7 @@ export default class Primary {
 		}
 		app.set('cluster', core);
 		app.set('cluster.length', 0);
-		core = app.get('cluster').valueOf();
+		core = app.get('cluster');
 		function fork (i) {
 			work[i] = cluster.fork();
 			work[i].on('error', app.error.bind(app));
@@ -150,7 +167,7 @@ export default class Primary {
 					case 'listen': {
 						app.set('cluster.length', app.get('cluster.length') + 1);
 						app.log(console.font('Worker listening', 32), console.font(`:${i.data}`, 33));
-						app.get('cluster').valueOf() === app.get('cluster.length').valueOf()
+						app.get('cluster') === app.get('cluster.length')
 							&& app.log(console.font('Ready', 32), `(PID:${console.font(process.pid, 33)})`);
 						break;
 					}
@@ -207,20 +224,21 @@ export default class Primary {
 	 * @return {Server} Returns the server that will be used to handle incoming requests.
 	 */
 	async server () {
-		const config = { http: app.get('http'), https: app.get('https') };
+		const config = { http: app.get('http', true), https: app.get('https', true) };
 		const domain = app.get('domain');
 		const server = net.createServer({ pauseOnConnect: true });
-		let port = config.http.port.valueOf() || 80;
-		if ('cert|key|port'.split('|').every(i => i in config.https)) try {
-			await fs.access(config.https.cert.valueOf());
-			await fs.access(config.https.key.valueOf());
-			http.createServer() // Create an HTTP server to redirect to HTTPS
-				.listen(port, () => app.log(console.font('Server listening', 32), console.font(`:${config.http.port || 80}`, 33)))
-				.on('request', (request, response) => {
-					response.writeHead(308, { 'Location': `https://${domain}${request.url}` });
-					response.end();
-				});
-			port = config.https.port.valueOf();
+		  let port = config.http.port.$value || 80;
+		  let cert;
+		try {
+			if ((cert = await Primary.secure())) {
+				http.createServer() // Create an HTTP server to redirect to HTTPS
+					.listen(port, () => app.log(console.font('Server listening', 32), console.font(`:${config.http.port.$value || 80}`, 33)))
+					.on('request', (request, response) => {
+						response.writeHead(308, { 'Location': `https://${domain}${request.url}` });
+						response.end();
+					});
+				port = cert.port;
+			}
 		} catch (e) {
 			app.error(e);
 		}

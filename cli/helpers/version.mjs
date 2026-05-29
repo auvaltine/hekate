@@ -1,4 +1,4 @@
-import semver		 from 'semver';
+import semver from 'semver';
 
 /**
  * Determines version differences between local and remote modules.

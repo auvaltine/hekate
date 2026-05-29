@@ -1,14 +1,13 @@
-import cluster	 from 'node:cluster';
-import fs		 from 'node:fs/promises';
+import cluster from 'node:cluster';
+import fs from 'node:fs/promises';
 import { watch } from 'node:fs';
-import http		 from 'node:http';
-import http2	 from 'node:http2';
-import tls		 from 'node:tls';
-import Network	 from 'hekate/network.js';
-import Primary	 from 'hekate/primary.js';
-import Template	 from 'hekate/template.js';
-import Request	 from 'hekate/request.js';
-import WebSocket from 'hekate/websocket.js';
+import http from 'node:http';
+import http2 from 'node:http2';
+import Network from 'hekate/network';
+import Primary from 'hekate/primary';
+import Template from 'hekate/template';
+import Request from 'hekate/request';
+import WebSocket from 'hekate/websocket';
 
 export default class Server {
 
@@ -32,9 +31,9 @@ export default class Server {
 					i.substring(i.lastIndexOf('.')) === '.js' && await import(`${app.root}/content/routes/${i}`);
 				}));
 				app.set('allow', app.get('template.directory'));
-				app.set.allow.forEach((r, i) => app.set.allow[i] = new RegExp('^' + r));
-				app.set.deny.forEach((r, i) => app.set.deny[i] = new RegExp('^' + r));
-				app.set.deny.ip.forEach((r, i) => app.set.deny.ip[i] = new Network(r));
+				app.get('allow').forEach((r, i, arr) => arr[i] = new RegExp('^' + r));
+				app.get('deny').forEach((r, i, arr) => arr[i] = new RegExp('^' + r));
+				app.get('deny.ip').forEach((r, i, arr) => arr[i] = new Network(r));
 				await new Template();
 				this.listen();
 			} catch (e) {
@@ -50,20 +49,40 @@ export default class Server {
 	 */
 	async listen () {
 		const domain = app.get('domain');
-		const config = { http: app.get('http'), https: app.get('https') };
 		const server = (await (async () => {
-				if ('cert|key|port'.split('|').every(i => i in config.https)) try {
-					const crt = config.https.cert.valueOf();
-					const key = config.https.key.valueOf();
+				let conf;
+				try {
+					conf = await Primary.secure();
 					  // When an SSL file changes, stop the server after 5 seconds to trigger a
 					  // reload of the new certificate and key.
-					  let tic = [ crt, key ].map(i => watch(i, () => clearTimeout(tic) ||
-					     (tic = setTimeout(process.disconnect.bind(process), 5000)))
-					   );
-					return http2.createSecureServer({ allowHTTP1: true, cert: await fs.readFile(crt), key: await fs.readFile(key) });
-				} catch (e) {}
-				delete app.set.https;
-				return http.createServer();
+					  let tic = [ conf.cert.path, conf.key.path ].map(i => watch(i, () => {
+						clearTimeout(tic);
+						tic = setTimeout(async () => {
+							try {
+								if ((conf = await Primary.secure())) {
+									process.disconnect();
+								} else {
+									app.error('https.cert');
+								}
+							} catch (e) {
+								app.error(e);
+								app.error('https.cert');
+							}
+						}, 5000);
+					  }));
+					return conf
+					   ? http2.createSecureServer({
+							allowHTTP1: true,
+							cert: conf.cert.file,
+							key: conf.key.file
+						})
+						: undefined;
+				} catch (e) {
+					app.error(e);
+					app.error('https.cert');
+					delete app.set.https;
+					return http.createServer();
+				}
 			})())
 			.listen(0, '::', () => process.send({ event: 'listen', data: server.address().port }))
 			.on('request', async (request, response) => /* HTTP/S requests */ {

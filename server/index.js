@@ -1,15 +1,15 @@
-import cluster			 from 'node:cluster';
-import fs				 from 'node:fs/promises';
+import cluster from 'node:cluster';
+import fs from 'node:fs/promises';
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
-import { cpus, tmpdir }	 from 'node:os';
-import { dirname }		 from 'node:path';
+import { cpus, tmpdir } from 'node:os';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import 'hekate/console.js';
-import 'hekate/primitive/array.js';
-import 'hekate/primitive/date.js';
-import 'hekate/primitive/number.js';
-import 'hekate/primitive/object.js';
-import 'hekate/primitive/string.js';
+import 'hekate/console';
+import 'hekate/primitive/array';
+import 'hekate/primitive/date';
+import 'hekate/primitive/number';
+import 'hekate/primitive/object';
+import 'hekate/primitive/string';
 
 export default global.app = new class Hekate {
 
@@ -36,6 +36,11 @@ export default global.app = new class Hekate {
 		this.package.config.deny.ip = [];
 		this.package.config.deny.ua = [];
 		Object.keys(this.package.config).map(i => this.set(i, this.package.config[i]));
+
+		Object.assign(this.error, {
+			'https.cert': () => new Error('HTTPS certificate update failed validation'),
+			'module.name': () => new ReferenceError('Modules cannot be named "get" or "load"')
+		});
 
 		/**
 		 * Sets a module function or file in preparation for loading.
@@ -131,20 +136,22 @@ export default global.app = new class Hekate {
 	/**
 	 * Processes error messages. If the error wasn't handled, exit the process.
 	 *
-	 * @param {Error} e: The error stack.
+	 * @param {Error|String} e: The error stack or namespace.
 	 * @param {String} type: The error caller.
 	 * @return {Boolean} Returns false.
 	 */
 	async error (e, type) {
 		const time = new Date();
-		e = (e = String(e.stack).match(Hekate.RegExp.error) || e).length === 5
+		e = typeof e === 'string' && this.error[e]
+			? (typeof this.error[e] === 'function' ? this.error[e]() : this.error[e])
+			: (e = String(e.stack).match(Hekate.RegExp.error) || e).length === 5
 			? `${console.font(e[1], 31)} at ` + // error
-			  (e[2].indexOf(this.root) === 0
-				  ? `${console.font(`file://${e[2].substring(0, this.root.length)}/`, 90)}${e[2].substring(this.root.length + 1)}`
+				(e[2].indexOf(this.root) === 0
+					? `${console.font(`file://${e[2].substring(0, this.root.length)}/`, 90)}${e[2].substring(this.root.length + 1)}`
 				: `${console.font(`file://${e[2]}`, 90)}`) +
-			  console.font(':', 90) + console.font(e[3], 33) + // line
-			  console.font(':', 90) + console.font(e[4], 33) // column
-			: e
+			console.font(':', 90) + console.font(e[3], 33) + // line
+			console.font(':', 90) + console.font(e[4], 33) // column
+			: e;
 		await this.log.to('stderr', e);
 		type === 'unhandledRejection' && process.exit();
 		return false;
@@ -154,10 +161,12 @@ export default global.app = new class Hekate {
 	 * Gets the value of a configuration setting.
 	 *
 	 * @param {String} key: A dot-notated string that is the setting name.
+	 * @param {Boolean} tree: If falsey, return the value of @key. If truthy, return the tree.
 	 * @return {*} Returns the value of the setting if found. Returns undefined otherwise.
 	 */
-	get (key) {
-		return this.set.walk(key);
+	get (key, tree = false) {
+		key = this.set.walk(key);
+		return tree ? key : key?.$value;
 	};
 
 	/**
@@ -219,11 +228,9 @@ export default global.app = new class Hekate {
 			 : typeof name === 'string' ? name.split(Hekate.RegExp.ws)
 			 : typeof name === 'function' ? [ name ]
 			 : [];
-		if (name.includes('get') || name.includes('load')) {
-			app.error(new ReferenceError('Modules cannot be named "get" or "load"'));
-		} else {
-			name.map(this.module.get);
-		}
+		name.includes('get') || name.includes('load')
+			? app.error('module.name')
+			: name.map(this.module.get);
 	};
 
 	/**
@@ -282,17 +289,14 @@ export default global.app = new class Hekate {
 	 * @return {*} Returns the setting value.
 	 */
 	set (key, value) {
-		const object = this.set.walk(key, true, true);
-		key = key.split('.').pop();
-		return value === undefined ? undefined : (object[key] =
-			object[key] instanceof Array ? object[key].concat(value instanceof Array ? value : [ value ]).unique()
-			: Object.prototype.toString.call(value) === '[object Object]'
-				? Object.assign(typeof object[key] === 'object' ? object[key] : {}, value)
-			: typeof value === 'boolean' ? new Boolean(value)
-			: typeof value === 'number' ? new Number(value)
-			: typeof value === 'string' ? new String(value)
-			: value
-		);
+		const node = this.set.walk(key, false, true);
+		if (Object.isObject(value)) {
+			Object.keys(value).map(i => this.set(i === '$value' ? key : `${key}.${i}`, value[i]));
+			return node;
+		}
+		return node.$value = node.$value instanceof Array
+			? node.$value.concat(value instanceof Array ? value : [ value ]).unique()
+			: value;
 	};
 
 	/**

@@ -1,9 +1,9 @@
-import fs					from 'node:fs/promises';
+import fs from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
-import http					from 'node:http';
-import zlib					from 'node:zlib';
-import Cookie				from 'hekate/cookie.js';
-import Template				from 'hekate/template.js';
+import http from 'node:http';
+import zlib from 'node:zlib';
+import Cookie from 'hekate/cookie';
+import Template from 'hekate/template';
 
 export default Response = {
 
@@ -69,7 +69,7 @@ export default Response = {
 		try {
 			return await (async function () {}).constructor(fn).call({
 				...this.view,
-				...app.get('view'),
+				...app.get('view', true),
 				file: request.file,
 				post: key => request.walk(`session.post.data.${key}`) || '',
 				session: request.session,

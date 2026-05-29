@@ -1,6 +1,6 @@
-import fs					 from 'node:fs/promises';
+import fs from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
-import { randomUUID }		 from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 
 export default class Parser {
 

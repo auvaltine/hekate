@@ -43,31 +43,40 @@ Object.defineProperties(Object, {
 	}}
 });
 Object.defineProperties(Object.prototype, {
+	/**
+	 * Walks a dot-notated object path.
+	 *
+	 * @param {String} key: A dot-notated object path.
+	 * @param {Boolean} returnParent: If truthy, return the parent tree of the final key.
+	 * @param {Boolean} createIfNone: If truthy, create missing nodes along the full path.
+	 * @return {*} Returns the final node, parent node, or undefined.
+	 */
 	walk: { value: function walk (key, returnParent = false, createIfNone = false) {
-		const orig = key;
 		const keys = key.split('.');
+		const last = keys.pop();
 		let object = this;
-		while (key = keys.shift()) {
-			if (keys.length) {
-				if (object[key] === undefined) {
-					if (createIfNone) {
-						object[key] = {};
-						object = object[key];
-					} else {
-						return undefined;
-					}
+		for (const key of keys) {
+			if (object[key] === undefined) {
+				if (createIfNone) {
+					object[key] = {};
 				} else {
-					object = object[key];
+					return undefined;
 				}
-			} else {
-				return returnParent
-					? object
-					: key
-						? object[key]
-						: object instanceof Array
-							? object[-1]
-							: undefined;
+			}
+			object = object[key];
+			if (!Object.isObject(object)) {
+				return undefined;
 			}
 		}
+		if (last && object[last] === undefined && createIfNone) {
+			object[last] = {};
+		}
+		return returnParent
+			? object
+			: last
+				? object[last]
+				: object instanceof Array
+					? object[-1]
+					: undefined;
 	}}
 });

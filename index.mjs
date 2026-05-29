@@ -1,26 +1,26 @@
 #! /usr/bin/env node
 
-import fs			 from 'node:fs/promises';
+import fs from 'node:fs/promises';
 
-import clear		 from './cli/helpers/clear.mjs';
-import domain		 from './cli/helpers/domain.mjs';
-import download		 from './cli/helpers/download.mjs';
-import error		 from './cli/helpers/error.mjs';
-import file			 from './cli/helpers/file.mjs';
-import loading		 from './cli/helpers/loading.mjs';
-import modules		 from './cli/helpers/modules.mjs';
-import pid			 from './cli/helpers/pid.mjs';
-import prompt		 from './cli/helpers/prompt.mjs';
-import scaffold		 from './cli/helpers/scaffold.mjs';
-import version		 from './cli/helpers/version.mjs';
+import clear from './cli/helpers/clear.mjs';
+import domain from './cli/helpers/domain.mjs';
+import download from './cli/helpers/download.mjs';
+import error from './cli/helpers/error.mjs';
+import file from './cli/helpers/file.mjs';
+import loading from './cli/helpers/loading.mjs';
+import modules from './cli/helpers/modules.mjs';
+import pids from './cli/helpers/pids.mjs';
+import prompt from './cli/helpers/prompt.mjs';
+import scaffold from './cli/helpers/scaffold.mjs';
+import version from './cli/helpers/version.mjs';
 
-import build		 from './cli/commands/build.mjs';
-import help			 from './cli/commands/help.mjs';
-import postinstall	 from './cli/commands/postinstall.mjs';
-import restart		 from './cli/commands/restart.mjs';
-import start		 from './cli/commands/start.mjs';
-import stop			 from './cli/commands/stop.mjs';
-import update		 from './cli/commands/update.mjs';
+import build from './cli/commands/build.mjs';
+import help from './cli/commands/help.mjs';
+import postinstall from './cli/commands/postinstall.mjs';
+import restart from './cli/commands/restart.mjs';
+import start from './cli/commands/start.mjs';
+import stop from './cli/commands/stop.mjs';
+import update from './cli/commands/update.mjs';
 
 console.status = (text, color) => console.log(
 	console.font('>', `-c ${color}`),
@@ -54,7 +54,7 @@ class Server {
 	file = file;
 	loading = loading;
 	modules = modules;
-	pid = pid;
+	pids = pids;
 	prompt = prompt;
 	scaffold = scaffold;
 	version = version;

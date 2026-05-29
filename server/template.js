@@ -1,6 +1,6 @@
-import fs						   from 'node:fs/promises';
+import fs from 'node:fs/promises';
 import { transformSync as minify } from '@babel/core';
-import sass						   from 'sass';
+import sass from 'sass';
 
 export default class Template {
 
@@ -65,7 +65,7 @@ export default class Template {
 				buff = await response.template(i, buff.args);
 				html.push(buff?.body || '');
 			}
-			body = (html[1] + html[0] + html[2]).replace('<head>', app.meta());
+			body = (html[1] + html[0] + html[2]).replace('<head>', `<head>${app.meta()}`);
 		} catch (e) {
 			app.error(e);
 		}

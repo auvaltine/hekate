@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import stream					  from 'node:stream';
+import stream from 'node:stream';
 
 export default class WebSocket {
 	static Clients = [];
