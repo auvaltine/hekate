@@ -1,3 +1,10 @@
+/**
+ * Finds child elements, optionally matching a selector and/or searching all descendants.
+ *
+ * @param {String|Boolean} [find] - Selector to match, or true to include all descendants.
+ * @param {Boolean} [deep=false] - When true, searches through descendants.
+ * @return {Hekate}
+ */
 Hekate.prototype.children = function (find, deep = false) {
 	deep = find === undefined || find === true ? find : deep;
 	typeof find === 'string' && (find = Hekate.css.token(find).query);

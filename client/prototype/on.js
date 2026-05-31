@@ -1,3 +1,12 @@
+/**
+ * Registers event handlers, with optional delegated selector and once behavior.
+ *
+ * @param {String|Object} evnt - Event name/list, namespace, or map of event names to functions.
+ * @param {String|Function} [trgt] - Delegated selector, or handler.
+ * @param {Function|Boolean} [fn] - Handler, or once flag.
+ * @param {Boolean} [once=false] - When true, removes the listener after one call.
+ * @return {Hekate}
+ */
 Hekate.prototype.on = function (evnt, trgt, fn, once, type) {
 	if (typeof evnt === 'string') {
 		type = evnt;

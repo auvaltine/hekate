@@ -6,7 +6,7 @@ import fs from 'node:fs/promises';
  *
  * 	- ./apps/[app-name]/assets/<html|js|scss>/
  * 	- ./apps/[app-name]/content/<l10n|pages|routes>/
- * 	- ./apps/[app-name]/content/modules/<client|server>/
+ * 	- ./apps/[app-name]/content/modules/
  * 	- ./apps/[app-name]/logs/
  * 	- ./apps/[app-name]/<config.js|index.js|package.json>
  * 	- ./apps/[app-name]/assets/html/<footer.html|header.html>
@@ -26,7 +26,7 @@ export default async function build () {
 			console.log(`${console.font('>', 32)} Installing ${console.font(`<${host.name}>`, 90)}\n`);
 			await fs.mkdir(host.path, { recursive: true });
 			i = `../..${host[1] !== 80 ? '/..' : ''}`;
-			i = await this.scaffold([
+			await this.scaffold([
 				[ 'assets/' ],
 				[ 'assets/html/' ],
 				[ 'assets/js/' ],
@@ -34,8 +34,6 @@ export default async function build () {
 				[ 'content/' ],
 				[ 'content/l10n/' ],
 				[ 'content/modules/' ],
-				[ 'content/modules/client/' ],
-				[ 'content/modules/server/' ],
 				[ 'content/pages/' ],
 				[ 'content/routes/' ],
 				[ 'logs/' ],
@@ -74,12 +72,13 @@ export default async function build () {
 				[ 'content/routes/get.js' ],
 				[ 'content/routes/post.js' ]
 			]);
-			i && (done = true);
+			done = true;
 		}
-		if (process.argv.length > 4) {
+		const modules = process.argv.slice(4).filter(i => i[0] !== '-');
+		if (modules.length) {
 			done = false;
 			const local = [];
-			const remote = await this.modules(process.argv.slice(4));
+			const remote = await this.modules(modules);
 			for (const i in remote) {
 				local.push({ name: i, host: host });
 			}

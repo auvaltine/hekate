@@ -1,3 +1,9 @@
+/**
+ * Toggles display when no value is given, or toggles class names when a value is provided.
+ *
+ * @param {String} [value] - Whitespace-separated class names to toggle.
+ * @return {Hekate}
+ */
 Hekate.prototype.toggle = function (value) {
 	return this.each(function () {
 		let elem;

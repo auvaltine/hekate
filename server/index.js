@@ -41,6 +41,7 @@ export default global.app = new class Hekate {
 			'https.cert': () => new Error('HTTPS certificate update failed validation'),
 			'module.name': () => new ReferenceError('Modules cannot be named "get" or "load"')
 		});
+		Object.defineProperty(this.module, 'config', { value: new Set() });
 
 		/**
 		 * Sets a module function or file in preparation for loading.
@@ -50,8 +51,12 @@ export default global.app = new class Hekate {
 		 */
 		Object.defineProperty(this.module, 'get', { value: function get (i) {
 			let file;
+			existsSync(file = `${app.root}/content/modules/${i}/config.js`) && app.module.config.add(file);
 			return typeof i === 'function' ? (app.module[i] = i)
 				 : app.module[i] ? app.module[i]
+				 : existsSync(file = `${app.root}/content/modules/${i}/index.js`) ?  (app.module[i] = file)
+				 : existsSync(file = `${app.root}/content/modules/${i}/server/${i}.js`) ?  (app.module[i] = file)
+				 : existsSync(file = `${app.root}/content/modules/${i}/server/index.js`) ?  (app.module[i] = file)
 				 : existsSync(file = `${app.root}/content/modules/server/${i}/${i}.js`) ?  (app.module[i] = file)
 				 : undefined;
 		}});
@@ -306,6 +311,9 @@ export default global.app = new class Hekate {
 	 */
 	async start () {
 		try { await import(`${this.root}/config.js`); } catch (e) {}
+		for (let i = 0; i < app.module.config.size; i++) {
+			try { await import(Array.from(app.module.config)[i]); } catch (e) {}
+		}
 		try { await import(`${this.root}${app.get('template.directory')}/config.js`); } catch (e) {}
 		cluster.isPrimary
 			? new (await import('./primary.js')).default
@@ -317,6 +325,6 @@ export default global.app = new class Hekate {
 process.env.TZ = 'UTC';
 process.on('uncaughtException', app.error.bind(app));
 process.on('SIGTERM', () => {
-	const primary = cluster.worker.process;
-	primary.kill(primary.pid, 'SIGKILL');
+	const primary = cluster.worker?.process;
+	primary && primary.kill(primary.pid, 'SIGKILL');
 });

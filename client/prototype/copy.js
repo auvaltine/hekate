@@ -1,3 +1,9 @@
+/**
+ * Clones the selected elements.
+ *
+ * @param {Boolean} [deep=false] - When true, clones child nodes too.
+ * @return {Hekate}
+ */
 Hekate.prototype.copy = function (deep = false) {
 	const clone = new Hekate();
 	deep = Boolean(deep);

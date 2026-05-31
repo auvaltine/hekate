@@ -27,28 +27,29 @@ export default async function modules (host) {
 				if (app.isFile()) { continue; }
 				if (app.name === 'content') /** found module directory */ {
 					const dir = `${host.path}/${app.name}/modules`;
-					await Promise.all(('client|server').split('|').map(async i => {
-						if (!await this.file(`${dir}/${i}`)) return false;
-						for await (const mod of await fs.opendir(`${dir}/${i}`)) {
-							let path;
-							if (
-								(mod.isDirectory()) &&
-								(await this.file(path = `${dir}/${i}/${mod.name}/${mod.name}.js`) ? mod : false)
-							) {
-								let head = (await sh.exec(`head -n 2 '${path}'`))
-									.stdout.trim()
-									.split('\n');
-								head[0] = (head[0]?.match(regexp.fversion) || []).slice(1, 3);
-								head[1] = (head[1]?.match(regexp.fdependencies) || [])[1]?.split(',');
-								repo.push({
-									name: head[0][0] || '@' + path.match(regexp.pathname)?.[1],
-									version: head[0][1] || '0.0.0',
-									dependencies: head[1],
-									host: host
-								});
-							}
+					if (!await this.file(dir)) return false;
+					for await (const mod of await fs.opendir(dir)) {
+						let path;
+						const file = [
+							`${dir}/${mod.name}/index.js`,
+							`${dir}/${mod.name}/server/${mod.name}.js`,
+							`${dir}/${mod.name}/server/index.js`,
+							`${dir}/${mod.name}/client/${mod.name}.js`
+						];
+						if (mod.isDirectory() && (path = (await Promise.all(file.map(async i => await this.file(i)))).filter(Boolean)[0]?.path)) {
+							let head = (await sh.exec(`head -n 2 '${path}'`))
+								.stdout.trim()
+								.split('\n');
+							head[0] = (head[0]?.match(regexp.fversion) || []).slice(1, 3);
+							head[1] = (head[1]?.match(regexp.fdependencies) || [])[1]?.split(',');
+							repo.push({
+								name: head[0][0] || '@' + mod.name,
+								version: head[0][1] || '0.0.0',
+								dependencies: head[1],
+								host: host
+							});
 						}
-					}));
+					}
 				} else if (/^\d+$/.test(app.name)) /* go into port directory */ {
 					repo.push(...await this.modules(`${host.path}/${app.name}`));
 				}

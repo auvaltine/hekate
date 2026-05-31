@@ -1,3 +1,11 @@
+/**
+ * Gets, sets, adds, or removes an attribute on each selected element.
+ *
+ * @param {String} name - Attribute name.
+ * @param {String|Number|Boolean|null} [value] - Omit to read, false to remove, null to set empty.
+ * @param {Boolean} [set=true] - When false and name is class, removes matching class names.
+ * @return {String|Hekate}
+ */
 Hekate.prototype.attr = function (name, value, set) {
 	set = set === undefined ? true : set;
 	if (value === undefined) {

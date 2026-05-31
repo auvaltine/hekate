@@ -5,10 +5,34 @@ import sass from 'sass';
 export default class Template {
 
 	static RegExp = {
-		clientPrototype: /^(Hekate\.[\w]+ = )?Hekate\.prototype\.(\w+) = function/,
-		client: /^@client\/[a-z\.]+$/,
+		clientPrototype: /^(\/\*\*[\s\S]*?\*\/\s*)?(Hekate\.[\w]+ = )?Hekate\.prototype\.(\w+) = function/,
+		client: /^@client\/[\w.-]+$/,
 		remote: /^https?:\/\//,
 		mini: /\.min\.js$/
+	};
+
+	static async ClientRoot (name) {
+		name = name.substring(8).split('/')[0];
+		for (const dir of [
+			`${app.root}/content/modules/${name}/client`,
+			`${app.root}/content/modules/client/${name}`
+		]) {
+			try {
+				await fs.access(dir);
+				return dir;
+			} catch (e) {}
+		}
+	};
+
+	static async Client (name, path) {
+		const root = await Template.ClientRoot(name);
+		if (root) {
+			try {
+				const file = `${root}/${path}`;
+				await fs.access(file);
+				return file;
+			} catch (e) {}
+		}
 	};
 
 	static Files = Object.assign(new Map(), {
@@ -65,11 +89,72 @@ export default class Template {
 				buff = await response.template(i, buff.args);
 				html.push(buff?.body || '');
 			}
-			body = (html[1] + html[0] + html[2]).replace('<head>', `<head>${app.meta()}`);
+			body = `${html[1]}\n${html[0]}\n${html[2]}`.replace('<head>', `<head>${app.meta()}`);
 		} catch (e) {
 			app.error(e);
 		}
 		return body;
+	};
+
+	/**
+	 * Compiles CSS and JavaScript files relative to an asset root.
+	 *
+	 * If <scss/index.scss> exists, it is compiled into <style.css> and <style.min.css>. If
+	 * JavaScript files are found, they are compiled into <script.min.js>.
+	 *
+	 * @param {String} root: The asset root.
+	 * @param {Array} js: Additional JavaScript files to include.
+	 * @return {Object} Returns generated asset locations and JavaScript source files.
+	 */
+	static async Asset (root, js = []) {
+		const asset = {
+			root,
+			style: false,
+			thin: false,
+			script: `${root}/script.min.js`,
+			scss: false,
+			js: []
+		};
+		const make = async () => {
+			try {
+				const scss = await fs.readFile(`${root}/scss/index.scss`, 'utf8');
+				asset.scss = true;
+				asset.style = `${root}/style.css`;
+				asset.thin = `${root}/style.min.css`;
+				for (const i of [ 'compressed', 'expanded' ]) {
+					await new Promise(resolve => sass.render({
+						data: scss,
+						includePaths: [ `${root}/scss` ],
+						indentType: 'tab',
+						indentWidth: 1,
+						outputStyle: i
+					}, async (e, result) => resolve(e ? app.error(e) : await fs.writeFile(i === 'expanded' ? asset.style : asset.thin, result.css))));
+				}
+			} catch (e) {}
+		};
+		  let time = 0;
+		const node = `${root}/js`;
+		const code = [];
+		await make();
+		await Template.List(`${root}/scss`, [ 'css', 'scss' ], make);
+		try { time = (await fs.stat(asset.script)).mtime; } catch (e) {}
+		try {
+			js = js.concat((await fs.readdir(node)).map(i => i[0] !== '.' && `${node}/${i}`).filter(Boolean));
+		} catch (e) {}
+		for (let i of js.filter(Boolean)) {
+			if (!Template.RegExp.mini.test(i) && (i = await app.file(i))) {
+				asset.js.push(i.path);
+				time === true || (i.mtime > time && (time = true));
+			}
+		}
+		if (time === true && asset.js.length) {
+			asset.js.sort();
+			for (let i of asset.js) {
+				code.push(await fs.readFile(i, 'utf8'));
+			}
+			await fs.writeFile(asset.script, minify(code.join('\n'), { comments: false, presets: [ 'minify' ] }).code);
+		}
+		return asset;
 	};
 
 	/**
@@ -157,8 +242,7 @@ export default class Template {
 			if (primary) /* Build client.js on app start */ {
 				await this.#client();
 			} else /* Build template files on worker start */ {
-				await this.#js();
-				await this.#scss();
+				await this.#assets();
 				await this.#html();
 			}
 			resolve();
@@ -225,8 +309,8 @@ export default class Template {
 				for await (let i of await fs.opendir(node)) {
 					i.name !== '.' && tree.push('\t' + (await fs.readFile(`${node}/${i.name}`, 'utf8')).trim()
 						.replace(Template.RegExp.clientPrototype, (...i) => {
-							i[1] && code.splice(2, 0, `\tstatic ${i[2]} = Hekate.prototype.${i[2]};`);
-							return i[2];
+							i[2] && code.splice(2, 0, `\tstatic ${i[3]} = Hekate.prototype.${i[3]};`);
+							return (i[1] || '') + i[3];
 						})
 						.replace(/\n/g, '\n\t'));
 				}
@@ -259,77 +343,45 @@ export default class Template {
 	};
 
 	/**
-	 * Compiles the SCSS stylesheet.
+	 * Compiles domain and module assets.
 	 *
 	 * @return {Template}
 	 */
-	async #scss () {
+	async #assets () {
+		this.js = [];
+		this.scss = [];
+		const prod = app.get('environment') == 'production';
 		const root = `${app.root}${app.get('template.directory')}`;
-		const full = `${root}/style.css`;
-		const thin = `${root}/style.min.css`;
-		const temp = (await Promise.all([]
-			.concat(app.get('template.css').filter(i => i[0] === '/'))
-			.concat(app.get('template.js').filter(i => Template.RegExp.client.test(i)).map(i => `/content/modules/${i.substring(1)}/scss`))
+		const mods = new Map((await Promise.all(app.get('template.css')
+			.concat(app.get('template.js'))
+			.filter(i => Template.RegExp.client.test(i))
+			.unique()
 			.map(async i => {
-				try {
-					await fs.access(`${app.root}${i}`);
-					return `${app.root}${i}`;
-				}
-				catch (e) {}
-			})))
-			.filter(Boolean);
-		const dirs = [ `${app.root}${app.get('template.directory')}/scss` ].concat(temp);
-		const make = async () => {
-			try {
-				const scss = (await fs.readFile(`${root}/scss/index.scss`)) + temp.map(i => `@import '${i}'`).join('\n');
-				for (const i of [ 'compressed', 'expanded' ]) {
-					await new Promise(resolve => sass.render({
-						data: scss,
-						includePaths: [ root + '/scss' ],
-						indentType: 'tab',
-						indentWidth: 1,
-						outputStyle: i
-					}, async (e, result) => resolve(e ? app.error(e) : await fs.writeFile(i === 'expanded' ? full : thin, result.css))));
-				}
-			} catch (e) { app.error(e); }
-		};
-		await Template.List(dirs, [ 'css', 'scss' ], make);
-		await make();
-		await Template.Files.open(app.get('environment') == 'production' ? thin : full);
-	};
-
-	/**
-	 * Compiles app scripts.
-	 *
-	 * @return {Template}
-	 */
-	async #js () {
-		this.#js.tree = [];
-		  let time = 0;
-		const node = `${app.root}${app.get('template.directory')}/js`;
-		const edge = `${node}/../script.min.js`;
-		const code = [];
-		try { time = (await fs.stat(edge)).mtime; } catch (e) {}
-		for (let i of [
-			...app.get('template.js').map(i => !Template.RegExp.remote.test(i)
-				?   i[0] === '/' ? `${app.root}/${i.substring(1)}`
-				  : i.substring(0, 8) === '@client/' && (i = i.split('/')) ? `${app.root}/content/modules/client/${i[1]}/${i[1]}.js`
-				  : i
-				: undefined).filter(Boolean),
-			...(await fs.readdir(node)).map(i => i[0] !== '.' && `${node}/${i}`).filter(Boolean)
-		]) {
-			if (!Template.RegExp.mini.test(i) && (i = await app.file(i))) {
-				this.#js.tree.push(i.path);
-				time === true || (i.mtime > time && (time = true));
+				const name = i.substring(8);
+				const css = await Template.Client(i, `${i.substring(8)}.css`);
+				const js = await Template.Client(i, `${name}.js`);
+				const root = await Template.ClientRoot(i);
+				return root ? [ i, Object.assign(await Template.Asset(root, [ js ]), { css }) ] : undefined;
+			})
+		)).filter(Boolean));
+		const asset = await Template.Asset(root, (await Promise.all(app.get('template.js').map(async i => !Template.RegExp.remote.test(i)
+			?   i[0] === '/' ? `${app.root}/${i.substring(1)}`
+			  : Template.RegExp.client.test(i) ? undefined
+			  : i
+			: undefined))).filter(Boolean));
+		this.scss = (await Promise.all(app.get('template.css').map(async i => {
+			if (Template.RegExp.remote.test(i)) {
+				return i;
+			} else if (Template.RegExp.client.test(i)) {
+				const mod = mods.get(i);
+				return prod ? (mod?.thin || mod?.css) : (mod?.css || mod?.style);
+			} else if (i[0] === '/') {
+				return `${app.root}/${i.substring(1)}`;
 			}
-		}
-		if (time === true) {
-			this.#js.tree.sort();
-			for (let i of this.#js.tree) {
-				code.push(await fs.readFile(i, 'utf8'));
-			}
-			await fs.writeFile(edge, minify(code.join('\n'), { comments: false, presets: [ 'minify' ] }).code);
-		}
+		}))).filter(Boolean);
+		this.script = [ asset.script ].concat(Array.from(mods.values()).filter(i => i.js.length).map(i => i.script));
+		this.js = asset.js.concat(...Array.from(mods.values()).map(i => i.js));
+		await Template.Files.open(prod ? asset.thin : asset.style);
 	};
 
 	/**
@@ -341,7 +393,6 @@ export default class Template {
 		  let load;
 		const asst = app.get('template.directory');
 		const prod = app.get('environment') == 'production';
-		const devl = app.get('environment') == 'development';
 		const root = await fs.opendir(`${app.root}${asst}/html`);
 		const make = async path => {
 			if (path.substring(path.lastIndexOf('.') + 1) === 'html') try {
@@ -353,13 +404,20 @@ export default class Template {
 			}
 		};
 		Template.On('open', `${root.path}/header.html`, data => {
-			const link = `<link rel="stylesheet" href="${asst}/style${prod ? '.min' : ''}.css">`;
-			return data.toString().replace(/<\/head>/, `\n${link}\n</head>`);
+			const head = data.toString();
+			const icon = /<link\s+[^>]*rel=(["']?)(?:shortcut\s+)?icon\1/i.test(head)
+				? ''
+				: `\n<link rel="icon" href="${app.get('template.favicon')}">`;
+				const link = [ `${asst}/style${prod ? '.min' : ''}.css` ]
+					.concat(this.scss.map(i => Template.RegExp.remote.test(i) ? i : i.substring(app.root.length)))
+				.map(i => `<link rel="stylesheet" href="${i}">`)
+				.join('\n');
+			return head.replace(/<\/head>/, `${icon}\n${link}\n</head>`);
 		});
 		Template.On('open', `${root.path}/footer.html`, data => {
 			const scrp = [ `${asst}/client${prod ? '.min' : ''}.js` ]
 				.concat(app.get('template.js').filter(i => Template.RegExp.remote.test(i)))
-				.concat(prod ? [ `${asst}/script.min.js` ] : this.#js.tree.map(i => devl ? i.substring(app.root.length) : `${asst}/js/${i}`))
+				.concat((prod ? this.script : this.js).map(i => i.substring(app.root.length)))
 				.filter(Boolean);
 			return data.toString().replace(/<\/body>/, scrp.map(i => `<script src="${i}"></script>`).join('\n') + '\n</body>');
 		});

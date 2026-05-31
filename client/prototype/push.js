@@ -1,3 +1,9 @@
+/**
+ * Adds nodes, strings, or Hekate collections to the current collection.
+ *
+ * @param {...String|Element|Hekate} node
+ * @return {Hekate}
+ */
 Hekate.prototype.push = function () {
 	const ns = this[0] && this[0].namespaceURI === 'http://www.w3.org/2000/svg' ? 'svg' : 'html';
 	for (let node of arguments) {

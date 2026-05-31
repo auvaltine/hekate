@@ -10,8 +10,8 @@ export default function error (error, text) {
 	this.clear();
 	if (error.stack) {
 		const e = error.stack.match(/^(.+): ([^\n]+)\n/) || [];
-		text  = error.stderr || e[2];
-		error = e[1]?.match(/([^:]+)$/)[1].trim();
+		text  = error.stderr || e[2] || error.message || 'Unknown error';
+		error = e[1]?.match(/([^:]+)$/)[1].trim() || error.constructor?.name || 'Error';
 	}
 	console.log(console.font('ERROR', 31), `${error}:`, console.font(text, 31));
 	process.exit(1);

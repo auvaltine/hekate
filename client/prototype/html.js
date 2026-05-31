@@ -1,3 +1,10 @@
+/**
+ * Gets, serializes, or inserts HTML/SVG content relative to each selected element.
+ *
+ * @param {String|Number|Element|Hekate|Boolean} [elem] - Omit to read innerHTML; true returns outerHTML.
+ * @param {String} [type=insert] - insert, append, prepend, before, after, replace, wrap, or into.
+ * @return {String|Hekate}
+ */
 Hekate.prototype.html = function (elem, type = 'insert') {
 	const create = typeof elem === 'string' || typeof elem === 'number';
 	let temp = [];

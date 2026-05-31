@@ -1,3 +1,5 @@
 node_modules/
 apps/
+hekate.code-workspace
 package-lock.json
+TODO.md

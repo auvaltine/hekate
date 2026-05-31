@@ -1,3 +1,10 @@
+/**
+ * Gets or stores private data for an element, falling back to data-* attributes when reading.
+ *
+ * @param {String} [name] - Data key. Omit to return the internal data record.
+ * @param {*} [value] - Value to store.
+ * @return {*|Hekate}
+ */
 Hekate.prototype.data = function (name, value) {
 	if (value === undefined) {
 		if (name === undefined) {

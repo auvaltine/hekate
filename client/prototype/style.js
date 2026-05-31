@@ -1,6 +1,13 @@
-Hekate.prototype.style = function (style) {
+/**
+ * Gets or sets style values on selected elements.
+ *
+ * @param {String|String[]|Object} style - Property name, list of names, or property/value map.
+ * @param {String|Number} [value] - Value to set when style is a string.
+ * @return {String|Number|Object|Hekate}
+ */
+Hekate.prototype.style = function (style, value) {
 	const css = {};
-	typeof style === 'string' && (style = [ style ]);
+	typeof style === 'string' && (style = arguments.length > 1 ? { [style]: value } : [ style ]);
 	if (style instanceof Array) {
 		const node = this[0];
 		const comp = window.getComputedStyle(node);

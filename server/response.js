@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
 import http from 'node:http';
 import zlib from 'node:zlib';
 import Cookie from 'hekate/cookie';
@@ -100,15 +101,10 @@ export default Response = {
 			} else {
 				this.setHeader('Cache-Control', 'no-cache');
 			}
-			await new Promise(resolve => {
-				let stream = createReadStream(file.path);
-				this.gzip() && (stream = stream.pipe(zlib.createGzip()));
-				stream.pipe(this);
-				stream.on('end', () => {
-					this.length = stream.bytesWritten;
-					resolve();
-				});
-			});
+			const stream = [ createReadStream(file.path) ];
+			this.gzip() && stream.push(zlib.createGzip());
+			await pipeline(...stream, this);
+			this.length = file.size;
 		}
 	},
 

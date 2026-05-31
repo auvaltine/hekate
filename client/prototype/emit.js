@@ -1,3 +1,10 @@
+/**
+ * Triggers one or more events on each selected element.
+ *
+ * @param {String} event - Event name, namespace, or whitespace-separated event list.
+ * @param {*} [data] - CustomEvent detail payload.
+ * @return {Hekate}
+ */
 Hekate.prototype.emit = function (event, data) {
 	event = event.replace(Hekate.regex.trim, ' ').split(Hekate.regex.ws);
 	return this.each(function () {

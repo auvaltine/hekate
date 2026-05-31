@@ -1,3 +1,9 @@
+/**
+ * Removes event handlers registered through .on().
+ *
+ * @param {String} evnt - Event name or namespace prefix.
+ * @return {Hekate}
+ */
 Hekate.prototype.off = function (evnt) {
 	return this.each(function () {
 		const evnts = Hekate.data(this).events;

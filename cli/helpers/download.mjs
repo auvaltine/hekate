@@ -19,8 +19,8 @@ export default async function download (local, remote) {
 		const dirs = [];
 		console.log(`${console.font(`<${i.host.name}>`, 90)} ${i.name}`);
 		for (const r of remote[i.name].request) {
-			const name = r.split('/').slice(0, 2).join('/');
-			const file = r.split('/').slice(2).join('/');
+			const name = r.split('/')[0];
+			const file = r.split('/').slice(1).join('/');
 			const path = `${i.host.path}/content/modules/${name}`;
 			if (!dirs.includes(path)) {
 				dirs.push(path);

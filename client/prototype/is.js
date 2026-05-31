@@ -1,3 +1,9 @@
+/**
+ * Checks whether any selected element matches a selector, element, or Hekate collection.
+ *
+ * @param {String|Element|Hekate} find
+ * @return {Boolean}
+ */
 Hekate.prototype.is = function (find) {
 	if (typeof find === 'string') {
 		find = new Hekate(find);

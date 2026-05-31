@@ -1,3 +1,9 @@
+/**
+ * Removes matching elements from the current selection.
+ *
+ * @param {Function|String|Element|Hekate} find
+ * @return {Hekate}
+ */
 Hekate.prototype.not = function (find) {
 	if (this.length) {
 		if (find instanceof Hekate) {

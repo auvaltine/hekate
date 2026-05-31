@@ -1,3 +1,9 @@
+/**
+ * Filters the current selection by function, selector, or exact element.
+ *
+ * @param {Function|String|Element} find
+ * @return {Hekate|Element[]}
+ */
 Hekate.prototype.filter = function (find) {
 	switch (typeof find) {
 		case 'function': {

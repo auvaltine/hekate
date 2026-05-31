@@ -1,3 +1,8 @@
+/**
+ * Gets the previous sibling element for each selected element.
+ *
+ * @return {Hekate}
+ */
 Hekate.prototype.prev = function () {
 	const elems = [];
 	this.each(function () { elems.push(this.previousElementSibling); });
