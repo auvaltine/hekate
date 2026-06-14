@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import stream from 'node:stream';
+import Session from 'hekate/session';
 
 export default class WebSocket {
 	static Clients = [];
@@ -11,10 +12,8 @@ export default class WebSocket {
 	 * @return {Promise} Returns a promise to end on the next ping.
 	 */
 	static Ping (socket) {
-		return Date.setTimeout(() => socket.write(
-			Buffer.from([ 0x81, 0x04, 0x70, 0x69, 0x6e, 0x67 ]), 'binary'),
-			socket.server.requestTimeout / 1.5
-		);
+		socket._ping?.stop();
+		return socket._ping = Date.setTimeout(() => WebSocket.Send('ping', socket), socket.server.requestTimeout / 1.5);
 	};
 
 	/**
@@ -73,20 +72,26 @@ export default class WebSocket {
 	 * @return {WebSocket}
 	 */
 	constructor (request, socket) {
-		socket.write([
-			'HTTP/1.1 101 Web Socket Protocol Handshake',
-			'Upgrade: WebSocket',
+		const headers = [
+			'HTTP/1.1 101 Switching Protocols',
+			'Upgrade: websocket',
 			'Connection: Upgrade',
 			'Sec-WebSocket-Accept: ' + createHash('sha1')
 				.update(request.headers['sec-websocket-key'] + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')
 				.digest('base64')
-		].join('\r\n') + '\r\n\r\n');
-		this.socket = WebSocket.Clients[WebSocket.Clients.push(socket.pipe(socket)) - 1];
+		];
+		socket.write(headers.join('\r\n') + '\r\n\r\n');
+		this.socket = WebSocket.Clients[WebSocket.Clients.push(socket) - 1];
 		this.socket._id = randomUUID();
-		this.socket.on('data', this.message.bind({ session: request.session, socket: this.socket, payload: this.payload }));
+		this.socket.session = Session.Find(request.headers.cookie || '', request);
+		this.socket.on('data', this.message.bind({ socket: this.socket, payload: this.payload }));
 		this.socket.on('error', e => app.log(e));
-		this.socket.on('close', i => ~(i = WebSocket.Clients.indexOf(this.socket)) && WebSocket.Clients.splice(i, 1));
+		this.socket.on('close', i => {
+			this.socket._ping?.stop();
+			~(i = WebSocket.Clients.indexOf(this.socket)) && WebSocket.Clients.splice(i, 1);
+		});
 		WebSocket.Ping(this.socket);
+		app.emit('socket.connect', this.socket, request);
 	};
 
 	/**
@@ -111,23 +116,34 @@ export default class WebSocket {
 			case 0x1: this.payload = ''; // begin text
 			case 0x2: this.payload = ''; // begin binary
 			case 0x0: { // continue
-				const size = data[1] & 0x7f;
-				const byte = size < 126 ? 2 : size === 126 ? 4 : 8;
+				let size = data[1] & 0x7f;
+				let byte = 2;
+				if (size === 126) {
+					size = data.readUInt16BE(byte);
+					byte += 2;
+				} else if (size === 127) {
+					if (data.readUInt32BE(byte)) {
+						return this.socket.destroy();
+					}
+					size = data.readUInt32BE(byte + 4);
+					byte += 8;
+				}
 				const mask = data.slice(byte, byte + 4);
-				this.payload += data.slice(byte + 4, byte + 4 + size).map((i, k) => i ^ mask[k % 4]);
+				byte += 4;
+				this.payload += data.slice(byte, byte + size).map((i, k) => i ^ mask[k % 4]);
 				break;
 			}
 			case 0x9: return; // ping undefined
 			case 0xa: return; // pong undefined
 			default:  return; // 0x3-0x7 0xb-0xf reserved
 		}
-		if (data[0] && 0x80) switch (this.payload) { // FIN
+		if (data[0] & 0x80) switch (this.payload) { // FIN
 			case 'ping': return;
 			case 'pong': return WebSocket.Ping(this.socket); // client heartbeat
 			default: {
 				try { this.payload = JSON.parse(this.payload); }
 				catch (e) { this.payload = { type: this.payload }; }
-				const fns = app.on['http.socket'].filter(i => i.match.test(this.payload.event));
+				const fns = (app.on['http.socket'] || []).filter(i => i.match.test(this.payload.event));
 				for (const i of fns) {
 					const emit = await i.call(this.socket, this.payload.event, this.payload.data);
 					if (emit === false) {

@@ -15,9 +15,18 @@ export default global.app = new class Hekate {
 
 	static RegExp = {
 		error: /^([^\n]+)\n\s*at [\s\S]*?\((?:file:\/\/)?(.+?):(\d+):(\d+)\)/,
+		class: /^class(?:\s|{)/,
 		esc: /\x1B\[\d+m/g,
 		meta: /^(?:author|description|generator|keywords|referrer|theme-color|color-scheme|viewport|creator|googlebot|publisher|robots|viewport)$/,
 		ws: /\s*,\s*/
+	};
+
+	static Value (node) {
+		return Object.isObject(node)
+			? '$value' in node
+				? node.$value
+				: Object.fromEntries(Object.keys(node).map(i => [ i, Hekate.Value(node[i]) ]))
+			: node;
 	};
 
 	/**
@@ -66,15 +75,18 @@ export default global.app = new class Hekate {
 		 * object. If the module triggers an error, it's deleted and unavailable for use.
 		 *
 		 * @param {String} i: The name of the module.
-		 * @param {Boolean} Returns true or false if an error triggers.
+		 * @return {Boolean} Returns true or false if an error triggers.
 		 */
 		Object.defineProperty(this.module, 'load', { value: async function load (i) {
 			try {
-				let load;
+				let load, module;
 				app.module[i] || app.module.get(i);
 				typeof app.module[i] === 'string' && (app.module[i] = await import(app.module[i]));
 				if ((load = typeof app.module[i] === 'function' ? app.module[i] : app.module[i].default || null)) {
-					await load();
+					module = Hekate.RegExp.class.test(Function.prototype.toString.call(load))
+						? new load()
+						: await load();
+					module === undefined || (app.module[i] = module);
 					return true;
 				} else throw Error;
 			} catch (e) {
@@ -171,7 +183,7 @@ export default global.app = new class Hekate {
 	 */
 	get (key, tree = false) {
 		key = this.set.walk(key);
-		return tree ? key : key?.$value;
+		return tree ? key : Hekate.Value(key);
 	};
 
 	/**

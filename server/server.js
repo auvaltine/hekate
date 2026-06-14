@@ -25,7 +25,11 @@ export default class Server {
 	constructor () {
 		(async file => {
 			await Primary.methods();
-			await Promise.all(Object.keys(app.module).filter(i => !Server.RegExp.module.test(i)).map(async i => await app.module.load(i)));
+			await Promise.all(Object
+				.keys(app.module)
+				.filter(i => !Server.RegExp.module.test(i))
+				.map(async i => await app.module.load(i))
+			);
 			try {
 				await Promise.all((await fs.readdir(`${app.root}/content/routes`)).map(async i => {
 					i.substring(i.lastIndexOf('.')) === '.js' && await import(`${app.root}/content/routes/${i}`);
@@ -92,7 +96,7 @@ export default class Server {
 				} else await Request.Incoming(request, response);
 			})
 			.on('upgrade', (request, socket) => /* WebSocket requests */ {
-				if (request.headers['upgrade'] === 'websocket') {
+				if (request.headers['upgrade']?.toLowerCase() === 'websocket') {
 					new WebSocket(request, socket);
 				} else {
 					socket.end('HTTP/1.1 400 Bad Request');
@@ -101,7 +105,7 @@ export default class Server {
 		process.on('message', (i, socket) => {
 			switch (i.event) {
 				case 'connection': socket && server.emit('connection', socket.resume()); break;
-				case 'socket': WebSocket.Send(i.data, i.sockets.length ? i.sockets : undefined); break;
+				case 'socket': WebSocket.Send(i.data, i.sockets?.length ? i.sockets : undefined); break;
 			}
 		});
 	};

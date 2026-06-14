@@ -52,7 +52,7 @@ export default class Primary {
 		 */
 		Object.defineProperty(app, i, /* Define HTTP routing verbs */ {
 			value: (...args) => i === 'get' && (args.length === 1 || typeof args[1] === 'boolean')
-				? (args[0] = app.set.walk(args[0])) && (args[1] ? args[0] : args[0].$value)
+				? (args[0] = app.set.walk(args[0])) && (args[1] ? args[0] : app.constructor.Value(args[0]))
 				: (args[1].match = typeof args[0] === 'string'
 					? new RegExp('^' + args[0].replace(Primary.RegExp.dots, '\\.') + (i === 'socket' ? '(?:\\..+|$)' : '$'))
 					: args[0]) && app.on(`http.${i}`, args[1])
@@ -68,7 +68,7 @@ export default class Primary {
 		 * @return {undefined}
 		 */
 		Object.defineProperty(app.socket, 'send', /* Socket message sender */ {
-			value: (event, data, sockets) => process.send({ event: 'socket', data: { event, data }, socket: (
+			value: (event, data, sockets) => process.send({ event: 'socket', data: { event, data }, sockets: (
 				  sockets instanceof stream.Duplex ? [ sockets ]
 				: sockets instanceof Array ? sockets.map(i => i instanceof stream.Duplex ? i._id : typeof i === 'string' ? i : undefined)
 				: typeof sockets === 'string' ? [ sockets ]
@@ -171,7 +171,7 @@ export default class Primary {
 							&& app.log(console.font('Ready', 32), `(PID:${console.font(process.pid, 33)})`);
 						break;
 					}
-					case 'socket': work.map(w => w.send({ event: 'socket', data: i.data, sockets: i.sockets })); break;
+					case 'socket': work.map(w => w.send({ event: 'socket', data: i.data, sockets: i.sockets || [] })); break;
 				}
 			});
 		};
@@ -236,6 +236,13 @@ export default class Primary {
 					.on('request', (request, response) => {
 						response.writeHead(308, { 'Location': `https://${domain}${request.url}` });
 						response.end();
+					})
+					.on('upgrade', (request, socket) => {
+						socket.end([
+							'HTTP/1.1 308 Permanent Redirect',
+							`Location: wss://${domain}${request.url}`,
+							'Connection: close'
+						].join('\r\n') + '\r\n\r\n');
 					});
 				port = cert.port;
 			}

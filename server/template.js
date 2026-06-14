@@ -13,14 +13,20 @@ export default class Template {
 
 	static async ClientRoot (name) {
 		name = name.substring(8).split('/')[0];
-		for (const dir of [
-			`${app.root}/content/modules/${name}/client`,
-			`${app.root}/content/modules/client/${name}`
-		]) {
-			try {
-				await fs.access(dir);
-				return dir;
-			} catch (e) {}
+		const names = [ name ];
+		for (let i = name.lastIndexOf('.'); i > 0; i = name.lastIndexOf('.', i - 1)) {
+			names.push(name.substring(0, i));
+		}
+		for (const name of names) {
+			for (const dir of [
+				`${app.root}/content/modules/${name}/client`,
+				`${app.root}/content/modules/client/${name}`
+			]) {
+				try {
+					await fs.access(dir);
+					return dir;
+				} catch (e) {}
+			}
 		}
 	};
 
@@ -139,7 +145,7 @@ export default class Template {
 		await Template.List(`${root}/scss`, [ 'css', 'scss' ], make);
 		try { time = (await fs.stat(asset.script)).mtime; } catch (e) {}
 		try {
-			js = js.concat((await fs.readdir(node)).map(i => i[0] !== '.' && `${node}/${i}`).filter(Boolean));
+			js = (await fs.readdir(node)).sort().map(i => i[0] !== '.' && `${node}/${i}`).filter(Boolean).concat(js);
 		} catch (e) {}
 		for (let i of js.filter(Boolean)) {
 			if (!Template.RegExp.mini.test(i) && (i = await app.file(i))) {
@@ -148,7 +154,7 @@ export default class Template {
 			}
 		}
 		if (time === true && asset.js.length) {
-			asset.js.sort();
+			asset.js = [ ...new Set(asset.js) ];
 			for (let i of asset.js) {
 				code.push(await fs.readFile(i, 'utf8'));
 			}
@@ -352,7 +358,7 @@ export default class Template {
 		this.scss = [];
 		const prod = app.get('environment') == 'production';
 		const root = `${app.root}${app.get('template.directory')}`;
-		const mods = new Map((await Promise.all(app.get('template.css')
+		const clients = (await Promise.all(app.get('template.css')
 			.concat(app.get('template.js'))
 			.filter(i => Template.RegExp.client.test(i))
 			.unique()
@@ -361,9 +367,21 @@ export default class Template {
 				const css = await Template.Client(i, `${i.substring(8)}.css`);
 				const js = await Template.Client(i, `${name}.js`);
 				const root = await Template.ClientRoot(i);
-				return root ? [ i, Object.assign(await Template.Asset(root, [ js ]), { css }) ] : undefined;
+				return root ? { css, js, key: i, root } : undefined;
 			})
-		)).filter(Boolean));
+		)).filter(Boolean);
+		const groups = new Map();
+		for (const client of clients) {
+			const group = groups.get(client.root) || { js: [], root: client.root };
+			client.js && group.js.push(client.js);
+			groups.set(client.root, group);
+		}
+		const assets = new Map(await Promise.all(Array.from(groups.values()).map(async group =>
+			[ group.root, await Template.Asset(group.root, [ ...new Set(group.js) ]) ]
+		)));
+		const mods = new Map(clients.map(client =>
+			[ client.key, Object.assign({}, assets.get(client.root), { css: client.css }) ]
+		));
 		const asset = await Template.Asset(root, (await Promise.all(app.get('template.js').map(async i => !Template.RegExp.remote.test(i)
 			?   i[0] === '/' ? `${app.root}/${i.substring(1)}`
 			  : Template.RegExp.client.test(i) ? undefined
@@ -379,8 +397,9 @@ export default class Template {
 				return `${app.root}/${i.substring(1)}`;
 			}
 		}))).filter(Boolean);
-		this.script = [ asset.script ].concat(Array.from(mods.values()).filter(i => i.js.length).map(i => i.script));
-		this.js = asset.js.concat(...Array.from(mods.values()).map(i => i.js));
+		const modAssets = [ ...new Map(Array.from(mods.values()).map(i => [ i.root, i ])).values() ];
+		this.script = [ asset.script ].concat(modAssets.filter(i => i.js.length).map(i => i.script));
+		this.js = asset.js.concat(...modAssets.map(i => i.js));
 		await Template.Files.open(prod ? asset.thin : asset.style);
 	};
 

@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Added support for module exports as classes, instantiating `export default class` modules during load.
+- Added support for async function modules returning a module object from `export default async function`.
+- Added client socket `error` and `close` events.
+- Added `socket.connect` emission when a WebSocket client connects.
+
+### Fixed
+- Fixed parent configuration reads so `app.get(<key>)` returns a plain object when only nested options are set.
+- Fixed class module loading so constructors are not invoked without `new`.
+- Fixed WebSocket secure redirects for upgrade requests.
+- Fixed WebSocket listeners to access the current session from the socket.
+- Fixed WebSocket handshake headers, frame length parsing, FIN checks, heartbeat cleanup, and missing socket listener fallback.
+- Fixed socket message targeting across worker processes.
+- Preserved WebSocket URL query strings in the client socket helper.
+- Fixed module client asset compilation to avoid duplicate scripts when multiple `@client/*` entries share the same module root.
+
+### Changed
+- Changed module client asset lookup to fall back through dotted namespace prefixes.
+- Changed module client JavaScript ordering so module-local client files are compiled before explicitly requested entries.
+
 ## 1.0.8 - 2026-05-31
 
 ### Added
